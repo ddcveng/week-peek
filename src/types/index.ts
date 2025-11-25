@@ -286,12 +286,6 @@ export interface ScheduleConfig {
   onEventClick?: (event: ScheduleEvent) => void;
   
   /**
-   * Whether to show time labels on the vertical axis
-   * Default: true
-   */
-  showTimeLabels?: boolean;
-  
-  /**
    * Whether to show day headers at the top
    * Default: true
    */

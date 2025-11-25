@@ -19,8 +19,6 @@
   text-align: left; // Ensure text is left-aligned
   box-shadow: $shadow-sm;
   transition: all $transition-fast;
-  //width: 100%; // Span full width of grid cell
-  //height: 100%; // Fill full height of grid cell
   box-sizing: border-box; // Include padding in width calculation
   position: relative;
   z-index: 1; // Ensure events appear above grid lines
@@ -68,10 +66,5 @@
   width: 100%; // Take full width for proper text wrapping
 }
 
-/**
- * Overlapping events (for future use)
- */
-.event--overlapping {
-  // Will be styled in Phase 5
-}
+// Overlapping events styling will be added in Phase 5
 

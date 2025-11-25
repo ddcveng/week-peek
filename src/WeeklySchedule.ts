@@ -7,7 +7,7 @@ import { WORK_WEEK_DAYS, TimeSlotInterval } from './types';
 import { validateConfig, validateEvent } from './utils/validators';
 import { filterVisibleEvents, calculateEventPosition } from './utils/layoutHelpers';
 import { createTimeLabelsHTML } from './templates/timeAxisTemplate';
-import { createDayColumnHTML } from './templates/dayColumnTemplate';
+import { createDayHeaderHTML } from './templates/dayColumnTemplate';
 import { createEventHTML } from './templates/eventTemplate';
 import './styles/main.scss';
 
@@ -80,17 +80,12 @@ export class WeeklySchedule {
    */
   private constructor(container: HTMLElement, config: ScheduleConfig, events: ScheduleEvent[] = []) {
     this.container = container;
-
-    // Store events separately (state, not config)
     this.events = [...events];
-
-    // Set defaults and store config
     this.config = {
       visibleDays: config.visibleDays || [...WORK_WEEK_DAYS],
       startHour: config.startHour ?? 9,
       endHour: config.endHour ?? 17,
       timeSlotInterval: config.timeSlotInterval ?? TimeSlotInterval.SixtyMinutes,
-      showTimeLabels: config.showTimeLabels ?? true,
       showDayHeaders: config.showDayHeaders ?? true,
       className: config.className || '',
       onEventClick: config.onEventClick,
@@ -98,7 +93,6 @@ export class WeeklySchedule {
       theme: config.theme || undefined
     } as ScheduleConfig;
 
-    // Initial render
     this.render();
   }
 
@@ -115,78 +109,77 @@ export class WeeklySchedule {
     const html = `
       <div 
         class="weekly-schedule ${this.config.className!}"
-        style="--visible-days: ${this.config.visibleDays!.length}; --time-slots: ${totalSlots};"
+        style="--num-columns: ${this.config.visibleDays!.length}; --num-rows: ${totalSlots};"
       >
-        ${this.config.showTimeLabels ? this.createTimeAxis() : ''}
-        <div class="days-grid">
-          ${this.createDayColumns(visibleEvents)}
-        </div>
+        <div class="schedule-intersection"></div>
+        ${this.createHeaderAxis()}
+        ${this.createTimeAxis()}
+        ${this.createEventsGrid(visibleEvents)}
       </div>
     `;
 
     this.container.innerHTML = html;
+    this.attachEventListeners();
   }
 
   /**
-   * Create time axis HTML
+   * Create header axis HTML (day headers in flex container)
+   * @private
+   */
+  private createHeaderAxis(): string {
+    if (!this.config.showDayHeaders) {
+      return '<div class="axis-horizontal"></div>';
+    }
+    
+    const headers = this.config.visibleDays!
+      .map(day => createDayHeaderHTML(day, this.config.dayNameTranslations))
+      .join('');
+    
+    return `<div class="axis-horizontal">${headers}</div>`;
+  }
+
+  /**
+   * Create time axis HTML (time labels in flex container)
    * @private
    */
   private createTimeAxis(): string {
-    return `
-      <div class="time-axis">
-        ${createTimeLabelsHTML(
-          this.config.startHour!,
-          this.config.endHour!,
-          this.config.timeSlotInterval!
-        )}
-      </div>
-    `;
+    const timeLabels = createTimeLabelsHTML(
+      this.config.startHour!,
+      this.config.endHour!,
+      this.config.timeSlotInterval!
+    );
+    
+    return `<div class="axis-vertical">${timeLabels}</div>`;
   }
 
   /**
-   * Create day columns HTML
+   * Create events grid HTML
    * @private
    */
-  private createDayColumns(events: ScheduleEvent[]): string {
-    return this.config.visibleDays!
-      .map((day, index) => {
-        const dayEvents = events.filter(e => e.day === day);
-        // Note: Column index: +2 because column 1 is time axis, column 2+ are day columns
-        const columnIndex = index + 2;
-        const positionedEventHTMLs = dayEvents.map(event =>
-          this.createPositionedEvent(event, columnIndex)
-        );
-        
-        return createDayColumnHTML(
-          day,
-          positionedEventHTMLs,
-          this.config.dayNameTranslations
-        );
-      })
-      .join('');
+  private createEventsGrid(events: ScheduleEvent[]): string {
+    const positionedEvents = events.map(event =>
+      this.createPositionedEvent(event)
+    ).join('');
+    
+    return `<div class="events-grid">${positionedEvents}</div>`;
   }
 
   /**
-   * Create positioned event HTML with grid styling
+   * Create positioned event HTML with grid styling (relative to events grid)
    * @private
    */
-  private createPositionedEvent(
-    event: ScheduleEvent,
-    dayColumnIndex: number
-  ): string {
+  private createPositionedEvent(event: ScheduleEvent): string {
     const layout = calculateEventPosition(
       event,
       this.config.startHour!,
       this.config.timeSlotInterval!,
-      dayColumnIndex
+      this.config.visibleDays!
     );
 
     const eventHTML = createEventHTML(event);
     
-    // Add grid positioning styles
-    // Note: grid-column is not needed since events are already in the correct day column
-    // Only grid-row is needed to position events vertically within the day-events grid
-    const gridStyle = `grid-row: ${layout.gridRowStart} / ${layout.gridRowEnd};`;
+    // Add grid positioning styles - relative to events grid
+    const gridStyle = `grid-column: ${layout.gridColumn}; grid-row: ${layout.gridRowStart} / ${layout.gridRowEnd};`;
     
     if (eventHTML.includes('style="')) {
       return eventHTML.replace(
@@ -199,6 +192,25 @@ export class WeeklySchedule {
         `class="event" style="${gridStyle}`
       );
     }
+  }
+
+  /**
+   * Attach event listeners for click handling
+   * @private
+   */
+  private attachEventListeners(): void {
+    if (!this.config.onEventClick) return;
+    
+    this.container.addEventListener('click', (e) => {
+      const eventEl = (e.target as HTMLElement).closest('.event');
+      if (eventEl) {
+        const eventId = eventEl.getAttribute('data-event-id');
+        const event = this.events.find(ev => ev.id === eventId);
+        if (event && this.config.onEventClick) {
+          this.config.onEventClick(event);
+        }
+      }
+    });
   }
 
   /**
@@ -273,7 +285,6 @@ export class WeeklySchedule {
       startHour: mergedConfig.startHour ?? this.config.startHour!,
       endHour: mergedConfig.endHour ?? this.config.endHour!,
       timeSlotInterval: mergedConfig.timeSlotInterval ?? this.config.timeSlotInterval!,
-      showTimeLabels: mergedConfig.showTimeLabels ?? this.config.showTimeLabels!,
       showDayHeaders: mergedConfig.showDayHeaders ?? this.config.showDayHeaders!,
       className: mergedConfig.className || this.config.className!,
       onEventClick: mergedConfig.onEventClick,

@@ -1,28 +1,25 @@
 import { TimeSlotInterval, Hour, Minute, TimeOnly } from '../types';
 
 /**
- * Create HTML for time axis labels
+ * Create HTML for time axis labels (flat list, no positioning)
  * @param startHour - Starting hour (0-23)
  * @param endHour - Ending hour (0-23)
  * @param timeSlotInterval - Interval enum value
- * @returns HTML string for time axis
+ * @returns HTML string for time axis labels
  */
 export function createTimeLabelsHTML(
   startHour: Hour,
   endHour: Hour,
   timeSlotInterval: TimeSlotInterval
 ): string {
-  let html = '<div class="time-label time-label--header"></div>';
+  let html = '';
   
   const slots: string[] = [];
   
-  // Helper to create time and format to string
-  // Values are guaranteed valid in this context (hour 0-23, minutes 0/15/30/45)
   const createTimeString = (hour: number, minute: number): string => {
     return new TimeOnly(hour as Hour, minute as Minute).toString();
   };
   
-  // Generate time slots
   for (let hour = startHour; hour <= endHour; hour++) {
     if (timeSlotInterval === TimeSlotInterval.SixtyMinutes) {
       slots.push(createTimeString(hour, 0));
@@ -43,8 +40,7 @@ export function createTimeLabelsHTML(
     }
   }
   
-  // Create label for each slot
-  slots.forEach(time => {
+  slots.forEach((time) => {
     html += `<div class="time-label">${time}</div>`;
   });
   
