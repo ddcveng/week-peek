@@ -49,3 +49,24 @@ export function createEventHTML(event: ScheduleEvent): string {
   `;
 }
 
+/**
+ * Create HTML for a single event in horizontal layout
+ * @param event - Event to render
+ * @returns HTML string for the event element
+ */
+export function createEventHTMLHorizontal(event: ScheduleEvent): string {
+  const style = event.color ? `background-color: ${event.color};` : '';
+  const className = `event ${event.className || ''}`.trim();
+  
+  return `
+    <div 
+      class="${className}" 
+      data-event-id="${event.id}"
+      style="${style}"
+    >
+      <div class="event-title">${escapeHTML(event.title)}</div>
+      <div class="event-time">${event.startTime.toString()} - ${event.endTime.toString()}</div>
+    </div>
+  `;
+}
+

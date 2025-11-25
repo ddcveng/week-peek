@@ -20,8 +20,10 @@
   box-shadow: $shadow-sm;
   transition: all $transition-fast;
   box-sizing: border-box; // Include padding in width calculation
-  position: relative;
+  position: absolute; // Use absolute positioning for fractional offsets
   z-index: 1; // Ensure events appear above grid lines
+  width: 100%; // Default width (will be overridden by inline style for fractional)
+  height: 100%; // Default height (will be overridden by inline style for fractional)
 }
 
 /**

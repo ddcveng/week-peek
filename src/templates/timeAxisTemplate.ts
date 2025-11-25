@@ -27,5 +27,5 @@ export function generateTimeSlots(startHour: Hour, endHour: Hour, timeSlotInterv
     }
   }
 
-  return slots;
+  return slots; 
 }

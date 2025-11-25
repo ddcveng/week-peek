@@ -9,7 +9,7 @@ import { validateConfig, validateEvent } from './utils/validators';
 import { filterVisibleEvents, calculateEventPosition } from './utils/layoutHelpers';
 import { createTimeLabelHTML, generateTimeSlots } from './templates/timeAxisTemplate';
 import { createDayHeaderHTML } from './templates/dayColumnTemplate';
-import { createEventHTML } from './templates/eventTemplate';
+import { createEventHTML, createEventHTMLHorizontal } from './templates/eventTemplate';
 import './styles/main.scss';
 
 /**
@@ -174,6 +174,7 @@ export class WeeklySchedule {
 
   /**
    * Create positioned event HTML with grid styling (relative to events grid)
+   * Uses absolute positioning for fractional time offsets
    * @private
    */
   private createPositionedEvent(event: ScheduleEvent): string {
@@ -185,19 +186,34 @@ export class WeeklySchedule {
       this.config.orientation!
     );
 
-    const eventHTML = createEventHTML(event);
+    // Use different rendering method based on orientation
+    const eventHTML = this.config.orientation === ScheduleOrientation.Horizontal
+      ? createEventHTMLHorizontal(event)
+      : createEventHTML(event);
     
+    // Base grid positioning (integer cell positions)
     const gridStyle = `grid-row: ${layout.gridRowStart} / ${layout.gridRowEnd}; grid-column: ${layout.gridColumnStart} / ${layout.gridColumnEnd};`;
+    
+    // Add absolute positioning for fractional offsets
+    // Positioning values are calculated in calculateEventPosition based on orientation
+    let positioningStyle = '';
+    if (layout.leftPercent !== undefined && layout.widthPercent !== undefined) {
+      positioningStyle = `position: absolute; left: ${layout.leftPercent}%; width: ${layout.widthPercent}%;`;
+    } else if (layout.topPercent !== undefined && layout.heightPercent !== undefined) {
+      positioningStyle = `position: absolute; top: ${layout.topPercent}%; height: ${layout.heightPercent}%;`;
+    }
+    
+    const fullStyle = `${gridStyle} ${positioningStyle}`;
     
     if (eventHTML.includes('style="')) {
       return eventHTML.replace(
         'style="',
-        `style="${gridStyle} `
+        `style="${fullStyle} `
       );
     } else {
       return eventHTML.replace(
         'class="event',
-        `class="event" style="${gridStyle}`
+        `class="event" style="${fullStyle}`
       );
     }
   }

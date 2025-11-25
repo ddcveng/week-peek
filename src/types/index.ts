@@ -347,6 +347,14 @@ export interface LayoutEvent extends ScheduleEvent {
    * Grid column end index (1-based for CSS Grid)
    */
   gridColumnEnd: number;
+  
+  /**
+   * CSS positioning values for fractional offsets
+   */
+  leftPercent?: number; // For horizontal orientation
+  topPercent?: number; // For vertical orientation
+  widthPercent?: number; // For horizontal orientation
+  heightPercent?: number; // For vertical orientation
 }
 
 /**

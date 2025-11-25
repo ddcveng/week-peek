@@ -18,29 +18,35 @@ export function timeToSlotIndex(
   return Math.floor(totalMinutes / timeSlotInterval);
 }
 
+
 /**
- * Calculate grid row index from DayOfWeek (for horizontal orientation)
- * @param day - Day of week enum value
- * @param visibleDays - Array of visible days to determine row index
- * @returns Grid row index (1-based for CSS Grid, relative to events grid)
+ * Calculate the fractional offset within a time slot (0.0 to 1.0)
+ * @param time - TimeOnly instance
+ * @param startHour - Starting hour for the schedule
+ * @param timeSlotInterval - Interval enum value
+ * @returns Fractional offset within the slot (0.0 = start of slot, 1.0 = end of slot)
  */
-export function dayToGridRow(
-  day: DayOfWeek,
-  visibleDays: DayOfWeek[]
+export function timeToSlotOffset(
+  time: TimeOnly,
+  startHour: Hour,
+  timeSlotInterval: TimeSlotInterval
 ): number {
-  const dayIndex = visibleDays.indexOf(day);
-  return dayIndex + 1; // +1 for 1-based indexing
+  const hoursFromStart = time.hours - startHour;
+  const totalMinutes = hoursFromStart * 60 + time.minutes;
+  const slotIndex = Math.floor(totalMinutes / timeSlotInterval);
+  const minutesIntoSlot = totalMinutes - (slotIndex * timeSlotInterval);
+  return minutesIntoSlot / timeSlotInterval;
 }
 
 /**
  * Calculate event position and grid properties (relative to events grid)
- * Returns row and column positions already mapped based on orientation.
+ * Returns integer grid positions and CSS positioning values for fractional offsets.
  * @param event - Event to position
  * @param startHour - Starting hour for the schedule
  * @param timeSlotInterval - Interval enum value
  * @param visibleDays - Array of visible days to determine day index
  * @param orientation - Schedule orientation (determines axis mapping)
- * @returns LayoutEvent with grid positioning (rows and columns already mapped correctly)
+ * @returns LayoutEvent with grid positioning and CSS positioning values
  */
 export function calculateEventPosition(
   event: ScheduleEvent,
@@ -49,27 +55,46 @@ export function calculateEventPosition(
   visibleDays: DayOfWeek[],
   orientation: ScheduleOrientation
 ): LayoutEvent {
-  const startTimeSlot = timeToSlotIndex(event.startTime, startHour, timeSlotInterval);
-  const endTimeSlot = timeToSlotIndex(event.endTime, startHour, timeSlotInterval);
-  const finalEndTimeSlot = Math.max(endTimeSlot, startTimeSlot + 1);
+  // Calculate which slots the event spans (integer positions)
+  const startSlot = timeToSlotIndex(event.startTime, startHour, timeSlotInterval);
+  const endSlot = timeToSlotIndex(event.endTime, startHour, timeSlotInterval);
+  const finalEndSlot = Math.max(endSlot, startSlot + 1);
+  
+  // Calculate fractional offsets within the start and end slots
+  const startOffset = timeToSlotOffset(event.startTime, startHour, timeSlotInterval);
+  const endOffset = timeToSlotOffset(event.endTime, startHour, timeSlotInterval);
   
   const dayIndex = visibleDays.indexOf(event.day);
   
   if (orientation === ScheduleOrientation.Horizontal) {
+    // Horizontal: rows = days, columns = time slots
+    const spanSlots = finalEndSlot - startSlot;
+    const leftPercent = startOffset * 100;
+    const widthPercent = ((1 - startOffset) + (spanSlots - 1) + endOffset) * 100;
+    
     return {
       ...event,
       gridRowStart: dayIndex + 1,
       gridRowEnd: dayIndex + 2, // Days span 1 row
-      gridColumnStart: startTimeSlot + 1,
-      gridColumnEnd: finalEndTimeSlot + 1
+      gridColumnStart: startSlot + 1,
+      gridColumnEnd: finalEndSlot + 1,
+      leftPercent,
+      widthPercent
     };
   } else {
+    // Vertical: rows = time slots, columns = days
+    const spanSlots = finalEndSlot - startSlot;
+    const topPercent = startOffset * 100;
+    const heightPercent = ((1 - startOffset) + (spanSlots - 1) + endOffset) * 100;
+    
     return {
       ...event,
-      gridRowStart: startTimeSlot + 1,
-      gridRowEnd: finalEndTimeSlot + 1,
+      gridRowStart: startSlot + 1,
+      gridRowEnd: finalEndSlot + 1,
       gridColumnStart: dayIndex + 1,
-      gridColumnEnd: dayIndex + 2 // Days span 1 column
+      gridColumnEnd: dayIndex + 2, // Days span 1 column
+      topPercent,
+      heightPercent
     };
   }
 }
