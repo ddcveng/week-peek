@@ -327,6 +327,21 @@ export interface ScheduleConfig {
  * Internal: Event with layout position calculated
  * @internal
  */
+/**
+ * Lane assignment information for overlapping events
+ */
+export interface LaneInfo {
+  /**
+   * 0-based lane index (0 = first lane, 1 = second lane, etc.)
+   */
+  laneIndex: number;
+  
+  /**
+   * Total number of lanes for this conflict group
+   */
+  totalLanes: number;
+}
+
 export interface LayoutEvent extends ScheduleEvent {
   /**
    * Grid row start index (1-based for CSS Grid)
@@ -355,6 +370,11 @@ export interface LayoutEvent extends ScheduleEvent {
   topPercent?: number; // For vertical orientation
   widthPercent?: number; // For horizontal orientation
   heightPercent?: number; // For vertical orientation
+  
+  /**
+   * Optional lane assignment for overlapping events
+   */
+  laneInfo?: LaneInfo;
 }
 
 /**

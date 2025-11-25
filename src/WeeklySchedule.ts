@@ -1,12 +1,14 @@
 import type {
   ScheduleConfig,
   ScheduleEvent,
-  AxisConfiguration
+  AxisConfiguration,
+  LaneInfo,
+  DayOfWeek
 } from './types';
 import type { Result } from './types/internal';
 import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation } from './types';
 import { validateConfig, validateEvent } from './utils/validators';
-import { filterVisibleEvents, calculateEventPosition } from './utils/layoutHelpers';
+import { calculateEventPosition, groupEventsByDay, assignLanes } from './utils/layoutHelpers';
 import { createTimeLabelHTML, generateTimeSlots } from './templates/timeAxisTemplate';
 import { createDayHeaderHTML } from './templates/dayColumnTemplate';
 import { createEventHTML, createEventHTMLHorizontal } from './templates/eventTemplate';
@@ -102,7 +104,7 @@ export class WeeklySchedule {
    * Render the schedule component
    */
   render(): void {
-    const visibleEvents = filterVisibleEvents(this.events, this.config.visibleDays!);
+    const visibleEvents = this.events.filter(event => this.config.visibleDays!.includes(event.day));
     
     const axisConfiguration = this.getAxisConfiguration();
     const headerAxis = this.createAxis(ScheduleOrientation.Horizontal, axisConfiguration.headerAxisData);
@@ -165,9 +167,22 @@ export class WeeklySchedule {
    * @private
    */
   private createEventsGrid(events: ScheduleEvent[]): string {
-    const positionedEvents = events.map(event =>
-      this.createPositionedEvent(event)
-    ).join('');
+    // Group events by day and assign lanes for overlapping events
+    const eventsByDay = groupEventsByDay(events);
+    const laneMaps = new Map<DayOfWeek, Map<string, LaneInfo>>();
+    
+    // Assign lanes for each day
+    for (const [day, dayEvents] of eventsByDay.entries()) {
+      laneMaps.set(day, assignLanes(dayEvents));
+    }
+    
+    // Create positioned events with lane info
+    const positionedEvents = events
+      .map(event => {
+        const laneInfo = laneMaps.get(event.day)?.get(event.id);
+        return this.createPositionedEvent(event, laneInfo);
+      })
+      .join('');
     
     return `<div class="events-grid">${positionedEvents}</div>`;
   }
@@ -175,16 +190,23 @@ export class WeeklySchedule {
   /**
    * Create positioned event HTML with grid styling (relative to events grid)
    * Uses absolute positioning for fractional time offsets
+   * @param event - Event to position
+   * @param laneInfo - Optional lane assignment for overlapping events
    * @private
    */
-  private createPositionedEvent(event: ScheduleEvent): string {
+  private createPositionedEvent(event: ScheduleEvent, laneInfo?: LaneInfo): string {
     const layout = calculateEventPosition(
       event,
       this.config.startHour!,
       this.config.timeSlotInterval!,
       this.config.visibleDays!,
-      this.config.orientation!
+      this.config.orientation!,
+      laneInfo
     );
+
+    if (event.id === '5a') {
+      console.log(layout);
+    }
 
     // Use different rendering method based on orientation
     const eventHTML = this.config.orientation === ScheduleOrientation.Horizontal
@@ -196,11 +218,19 @@ export class WeeklySchedule {
     
     // Add absolute positioning for fractional offsets
     // Positioning values are calculated in calculateEventPosition based on orientation
-    let positioningStyle = '';
-    if (layout.leftPercent !== undefined && layout.widthPercent !== undefined) {
-      positioningStyle = `position: absolute; left: ${layout.leftPercent}%; width: ${layout.widthPercent}%;`;
-    } else if (layout.topPercent !== undefined && layout.heightPercent !== undefined) {
-      positioningStyle = `position: absolute; top: ${layout.topPercent}%; height: ${layout.heightPercent}%;`;
+    // Both time-based positioning and lane-based positioning are always applied
+    let positioningStyle = 'position: absolute;';
+    if (layout.leftPercent !== undefined) {
+      positioningStyle += ` left: ${layout.leftPercent}%;`;
+    }
+    if (layout.widthPercent !== undefined) {
+      positioningStyle += ` width: ${layout.widthPercent}%;`;
+    }
+    if (layout.topPercent !== undefined) {
+      positioningStyle += ` top: ${layout.topPercent}%;`;
+    }
+    if (layout.heightPercent !== undefined) {
+      positioningStyle += ` height: ${layout.heightPercent}%;`;
     }
     
     const fullStyle = `${gridStyle} ${positioningStyle}`;
