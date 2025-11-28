@@ -2,9 +2,9 @@
 @use 'mixins' as *;
 
 /**
- * Main schedule grid layout - 2x2 master grid
+ * Main schedule grid layout - left headers + right content
  */
-.weekly-schedule {
+ .weekly-schedule {
   --header-height: $day-header-height;
   --cross-axis-width: $time-axis-width;
   
@@ -17,7 +17,50 @@
   overflow: hidden;
   font-family: var(--schedule-font-family, $font-family);
   min-width: 0; // Prevent grid overflow
+ }
+
+ .schedule-intersection {
+  grid-column: 1;
+  grid-row: 1;
+ }
+
+ .axis-vertical {
+  grid-column: 1;
+  grid-row: 2;
+ }
+
+ .schedule-scroll {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: grid;
+  grid-template-rows: var(--header-height) 1fr;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; // normal mode default
+ }
+
+
+/**
+ * Scroll container holds header axis + events grid
+ */
+.schedule-scroll {
+  display: grid;
+  grid-template-rows: var(--header-height) 1fr;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; // normal mode default
 }
+
+.weekly-schedule.zoomed.horizontal .schedule-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.weekly-schedule.zoomed.vertical .schedule-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 
 /**
  * Intersection cell (top-left corner)
@@ -50,44 +93,42 @@
  * Flex container for axes
  * Base styles for both horizontal and vertical axes
  */
-.axis-horizontal,
-.axis-vertical {
-  background: var(--schedule-bg-color, $color-bg-alt);
-  
-  // Section dividers
-  &.axis-horizontal {
-    border-bottom: 1px solid var(--schedule-grid-line-color, $color-border);
-  }
-  
-  &.axis-vertical {
-    border-right: 1px solid var(--schedule-grid-line-color, $color-border);
-  }
-}
+ .axis-horizontal,
+ .axis-vertical {
+   background: var(--schedule-bg-color, $color-bg-alt);
+ }
+
+ .axis-horizontal {
+   border-bottom: 1px solid var(--schedule-grid-line-color, $color-border);
+ }
+
+ .axis-vertical {
+   border-right: 1px solid var(--schedule-grid-line-color, $color-border);
+ }
+
 
 /**
  * Horizontal axis (day headers or time labels)
  */
-.axis-horizontal {
-  display: flex;
-  flex-direction: row;
-  min-width: 0; // Allow flex to shrink
-  
-  // Dividers between children
-  > * {
-    border-right: 1px solid var(--schedule-grid-line-color, $color-border);
-    flex: 1; // Stretch to fill available space
-    min-width: 0; // Allow shrinking
-    
-    &:last-child {
-      border-right: none;
-    }
-  }
-  
-  // For time labels in horizontal orientation, distribute evenly
-  .time-label {
-    flex: 1; // Equal width, fill container
-  }
-}
+ .axis-horizontal {
+   display: grid;
+   grid-auto-flow: column;
+   grid-auto-columns: 1fr;
+   min-width: 0;
+ }
+
+ // Normal mode: fluid columns
+ .weekly-schedule.horizontal .axis-horizontal {
+   grid-template-columns: repeat(var(--num-columns, 8), 1fr);
+ }
+
+ // Fixed hour width in zoomed horizontal mode
+ .weekly-schedule.zoomed.horizontal .axis-horizontal {
+   grid-template-columns: repeat(var(--num-columns, 8), var(--hour-col-width, 160px));
+   width: max-content;
+ }
+
+
 
 /**
  * Vertical axis (time labels)
@@ -155,46 +196,117 @@
 /**
  * Events grid - nested grid containing only events
  */
-.events-grid {
-  --line-thickness: 1px;
-  display: grid;
-  grid-template-columns: repeat(var(--num-columns, 5), 1fr);
-  // Use flexible row sizing when height is set, otherwise use fixed height
-  grid-template-rows: repeat(var(--num-rows, 8), minmax(0, 1fr));
-  position: relative;
-  min-height: 0; // Allow grid to shrink below content size
-  
-  // Horizontal grid lines
-  &::after {
-    @include grid-line-pseudo;
-    
-    // Calculate row height accounting for 1px lines between rows
-    $row-height: calc((100% - (var(--num-rows, 8) - 1) * var(--line-thickness)) / var(--num-rows, 8));
-    
-    background-image: repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent $row-height,
-      var(--schedule-grid-line-color, $color-border) $row-height,
-      var(--schedule-grid-line-color, $color-border) calc($row-height + var(--line-thickness)),
-      transparent calc($row-height + var(--line-thickness))
-    );
-  }
-  
-  // Vertical grid lines
-  &::before {
-    @include grid-line-pseudo;
-    
-    // Calculate column width accounting for 1px lines between columns
-    $col-width: calc((100% - (var(--num-columns, 5) - 1) * var(--line-thickness)) / var(--num-columns, 5));
-    
-    background-image: repeating-linear-gradient(
-      to right,
-      transparent 0,
-      transparent $col-width,
-      var(--schedule-grid-line-color, $color-border) $col-width,
-      var(--schedule-grid-line-color, $color-border) calc($col-width + var(--line-thickness)),
-      transparent calc($col-width + var(--line-thickness))
-    );
-  }
-}
+ .events-grid {
+   --line-thickness: 1px;
+   display: grid;
+   grid-template-columns: repeat(var(--num-columns, 5), 1fr);
+   grid-template-rows: repeat(var(--num-rows, 8), minmax(0, 1fr));
+   position: relative;
+   min-height: 0;
+   width: 100%;
+   height: 100%;
+   overflow: hidden; // events themselves are absolutely positioned
+ }
+
+ // Grid lines moved to scroll container children (optional). Keep existing if needed.
+ .events-grid::after,
+ .events-grid::before {
+   content: none;
+ }
+
+ // Normal mode: fluid sizing
+ .weekly-schedule.horizontal .events-grid {
+   grid-template-columns: repeat(var(--num-columns, 8), 1fr);
+ }
+
+ // Zoomed horizontal: fixed column width per hour
+ .weekly-schedule.zoomed.horizontal .events-grid {
+   grid-template-columns: repeat(var(--num-columns, 8), var(--hour-col-width, 160px));
+   width: max-content;
+ }
+
+ .weekly-schedule.zoomed.vertical .events-grid {
+   grid-template-rows: repeat(var(--num-rows, 8), var(--slot-row-height, 48px));
+   height: max-content;
+ }
+
+ /* GRID LINES - NORMAL MODE */
+ /* Horizontal orientation vertical lines */
+ .weekly-schedule.horizontal .axis-horizontal,
+ .weekly-schedule.horizontal .events-grid {
+   position: relative;
+ }
+ .weekly-schedule.horizontal .axis-horizontal::before,
+ .weekly-schedule.horizontal .events-grid::before {
+   @include grid-line-pseudo;
+   background-repeat: no-repeat;
+   background-size: 100% 100%;
+   background-image: repeating-linear-gradient(
+     to right,
+     transparent 0,
+     transparent calc((100% / var(--num-columns)) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) calc((100% / var(--num-columns)) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-columns))
+   );
+ }
+
+ /* Horizontal orientation: add horizontal day separator lines (not in zoomed mode since only one day visible) */
+ .weekly-schedule.horizontal:not(.zoomed) .events-grid::after {
+   @include grid-line-pseudo;
+   background-repeat: no-repeat;
+   background-size: 100% 100%;
+   background-image: repeating-linear-gradient(
+     to bottom,
+     transparent 0,
+     transparent calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-rows))
+   );
+ }
+ /* Vertical orientation horizontal lines */
+ .weekly-schedule.vertical .axis-vertical,
+ .weekly-schedule.vertical .events-grid { position: relative; }
+ .weekly-schedule.vertical .axis-vertical::before,
+ .weekly-schedule.vertical .events-grid::before {
+   @include grid-line-pseudo;
+   background-repeat: no-repeat;
+   background-size: 100% 100%;
+   background-image: repeating-linear-gradient(
+     to bottom,
+     transparent 0,
+     transparent calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-rows))
+   );
+ }
+
+ /* GRID LINES - ZOOMED MODE (FIXED SIZES) */
+ .weekly-schedule.zoomed.horizontal .axis-horizontal::before,
+ .weekly-schedule.zoomed.horizontal .events-grid::before {
+   background-image: repeating-linear-gradient(
+     to right,
+     transparent 0,
+     transparent calc(var(--hour-col-width, 160px) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) calc(var(--hour-col-width, 160px) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) var(--hour-col-width, 160px)
+   );
+ }
+ .weekly-schedule.zoomed.vertical .axis-vertical::before,
+ .weekly-schedule.zoomed.vertical .events-grid::before {
+   background-image: repeating-linear-gradient(
+     to bottom,
+     transparent 0,
+     transparent calc(var(--slot-row-height, 48px) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) calc(var(--slot-row-height, 48px) - var(--line-thickness, 1px)),
+     var(--schedule-grid-line-color, $color-border) var(--slot-row-height, 48px)
+   );
+ }
+
+
+  // Zoomed vertical: fixed row height per slot
+ .weekly-schedule.zoomed.vertical .events-grid {
+   grid-template-rows: repeat(var(--num-rows, 8), var(--slot-row-height, 48px));
+   height: max-content;
+ }
+
+

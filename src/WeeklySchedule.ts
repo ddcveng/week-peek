@@ -23,8 +23,9 @@ export class WeeklySchedule {
   private container: HTMLElement;
   private config: ScheduleConfig;
   private events: ScheduleEvent[];
-  private originalVisibleDays: DayOfWeek[];
-  private zoomedDay: DayOfWeek | null = null;
+   private originalVisibleDays: DayOfWeek[];
+   private zoomedDay: DayOfWeek | null = null;
+
 
 
   /**
@@ -141,28 +142,35 @@ export class WeeklySchedule {
       styleString += ` height: ${this.config.height};`;
     }
 
-    const html = `
-      <div 
-        class="weekly-schedule ${this.config.className!}"
-        style="${styleString}"
-      >
-        <div class="schedule-intersection">${this.renderIntersection()}</div>
-        ${headerAxis}
-        ${crossAxis}
-        ${this.createEventsGrid(visibleEvents)}
-      </div>
-    `;
+     const orientationClass = this.config.orientation === ScheduleOrientation.Horizontal ? 'horizontal' : 'vertical';
+     const zoomClass = this.zoomedDay !== null ? 'zoomed' : '';
+     const html = `
+       <div 
+         class="weekly-schedule ${orientationClass} ${zoomClass} ${this.config.className!}"
+         style="${styleString}"
+       >
+         <div class="schedule-intersection">${this.renderIntersection()}</div>
+         ${crossAxis}
+         <div class="schedule-scroll">
+           ${headerAxis}
+           ${this.createEventsGrid(visibleEvents)}
+         </div>
+       </div>
+     `;
+
 
     this.container.innerHTML = html;
   }
 
-  private renderIntersection(): string {
-    if (this.zoomedDay === null) {
-      return '';
+    private renderIntersection(): string {
+      if (this.zoomedDay === null) {
+        return '';
+      }
+      const label = getDayName(this.zoomedDay, this.config.dayNameTranslations);
+      return `<button class="zoom-reset-btn" aria-label="Back to week">Back to week</button><span class="zoom-breadcrumb">${label}</span>`;
     }
-    const label = getDayName(this.zoomedDay, this.config.dayNameTranslations);
-    return `<button class="zoom-reset-btn" aria-label="Back to week">Back to week</button><span class="zoom-breadcrumb">${label}</span>`;
-  }
+
+
 
 
   private getAxisConfiguration(): AxisConfiguration {
@@ -285,15 +293,18 @@ export class WeeklySchedule {
   }
 
   private attachEventListeners(): void {
-    this.container.addEventListener('click', (e: Event) => {
-      const target = e.target as HTMLElement;
+     this.container.addEventListener('click', (e: Event) => {
+       const target = e.target as HTMLElement;
+ 
+       // Intersection reset button
+       const resetBtn = target.closest('.zoom-reset-btn');
+       if (resetBtn) {
+         this.resetZoom();
+         return;
+       }
 
-      // Intersection reset button
-      const resetBtn = target.closest('.zoom-reset-btn');
-      if (resetBtn) {
-        this.resetZoom();
-        return;
-      }
+       // (Removed time window scroll controls)
+
 
       // Day header click to toggle zoom
       const dayHeader = target.closest('.day-header');
@@ -379,31 +390,38 @@ export class WeeklySchedule {
     };
   }
 
-  zoomToDay(day: DayOfWeek): void {
-    if (!this.originalVisibleDays) {
-      this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
+    zoomToDay(day: DayOfWeek): void {
+      if (!this.originalVisibleDays) {
+        this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
+      }
+      this.zoomedDay = day;
+      // Keep full original time range; just restrict visible days
+      this.updateConfig({ visibleDays: [day] });
     }
-    this.zoomedDay = day;
-    this.updateConfig({ visibleDays: [day] });
-  }
 
-  resetZoom(): void {
-    if (this.zoomedDay === null) return;
-    this.zoomedDay = null;
-    this.updateConfig({ visibleDays: this.originalVisibleDays });
-  }
+
+
+    resetZoom(): void {
+      if (this.zoomedDay === null) return;
+      this.zoomedDay = null;
+      this.updateConfig({ visibleDays: this.originalVisibleDays });
+    }
+
+
 
   /**
    * Update configuration and re-render
    * @param newConfig - Partial configuration to merge
    * @returns Result indicating success or failure
    */
-  updateConfig(newConfig: Partial<ScheduleConfig>): Result<void, Error> {
+    updateConfig(newConfig: Partial<ScheduleConfig>): Result<void, Error> {
 
-    const mergedConfig: ScheduleConfig = {
-      ...this.config,
-      ...newConfig
-    };
+ 
+     const mergedConfig: ScheduleConfig = {
+       ...this.config,
+       ...newConfig
+     };
+
 
     const validation = validateConfig(mergedConfig);
     if (!validation.success) {
