@@ -22,11 +22,29 @@
 /**
  * Intersection cell (top-left corner)
  */
-.schedule-intersection {
+ .schedule-intersection {
   background: var(--schedule-bg-color, $color-bg-header);
   border-right: 1px solid var(--schedule-grid-line-color, $color-border);
   border-bottom: 1px solid var(--schedule-grid-line-color, $color-border);
-}
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 0 $spacing-sm;
+ }
+
+ .zoom-reset-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--schedule-header-text-color, $color-text-primary);
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+ }
+
+ .weekly-schedule.zoomed .day-header {
+  font-size: $font-size-base;
+ }
+
 
 /**
  * Flex container for axes
@@ -52,10 +70,13 @@
 .axis-horizontal {
   display: flex;
   flex-direction: row;
+  min-width: 0; // Allow flex to shrink
   
   // Dividers between children
   > * {
     border-right: 1px solid var(--schedule-grid-line-color, $color-border);
+    flex: 1; // Stretch to fill available space
+    min-width: 0; // Allow shrinking
     
     &:last-child {
       border-right: none;
@@ -74,10 +95,13 @@
 .axis-vertical {
   display: flex;
   flex-direction: column;
+  min-height: 0; // Allow flex to shrink
   
   // Dividers between children
   > * {
     border-bottom: 1px solid var(--schedule-grid-line-color, $color-border);
+    flex: 1; // Stretch to fill available space
+    min-height: 0; // Allow shrinking
     
     &:last-child {
       border-bottom: none;
@@ -96,7 +120,9 @@
   color: var(--schedule-time-text-color, $color-text-secondary);
   background: var(--schedule-bg-color, $color-bg-alt);
   padding: 0 $spacing-sm;
-  height: $time-slot-height; // Match time slot height (vertical orientation)
+  // Use flexible height to match grid rows when height is set, otherwise use fixed height
+  height: 100%; // Stretch to fill available space in vertical axis
+  //min-height: $time-slot-height; // Minimum height fallback
   flex-shrink: 0; // Prevent shrinking
   
   // Horizontal orientation: use width instead of height, flex will handle equal distribution
@@ -133,8 +159,10 @@
   --line-thickness: 1px;
   display: grid;
   grid-template-columns: repeat(var(--num-columns, 5), 1fr);
-  grid-template-rows: repeat(var(--num-rows, 8), $time-slot-height);
+  // Use flexible row sizing when height is set, otherwise use fixed height
+  grid-template-rows: repeat(var(--num-rows, 8), minmax(0, 1fr));
   position: relative;
+  min-height: 0; // Allow grid to shrink below content size
   
   // Horizontal grid lines
   &::after {

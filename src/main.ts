@@ -70,7 +70,7 @@ const scheduleContainer = document.getElementById('schedule-container')!;
 const result = WeeklySchedule.create(
   scheduleContainer,
   {
-    orientation: ScheduleOrientation.Vertical,
+    orientation: ScheduleOrientation.Horizontal,
     visibleDays: [
       DayOfWeek.Monday,
       DayOfWeek.Tuesday,
@@ -80,13 +80,19 @@ const result = WeeklySchedule.create(
     ],
     startHour: 9,
     endHour: 17,
-    onEventClick: (event) => {
-      console.log('Event clicked:', event);
-      alert(`Clicked: ${event.title}\nTime: ${event.startTime.toString()} - ${event.endTime.toString()}`);
-    }
+    width: '1200px',  // Set component width
+    height: '600px',  // Set component height - axes will stretch to fill space
   },
   events
 );
+
+// Listen for custom event clicks
+scheduleContainer.addEventListener('schedule-event-click', ((e: Event) => {
+  const customEvent = e as CustomEvent<{ event: ScheduleEvent }>;
+  const event = customEvent.detail.event;
+  console.log('Event clicked:', event);
+  alert(`Clicked: ${event.title}\nTime: ${event.startTime.toString()} - ${event.endTime.toString()}`);
+}) as EventListener);
 
 if (!result.success) {
   console.error('Failed to create schedule:', result.error);

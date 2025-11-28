@@ -288,12 +288,6 @@ export interface ScheduleConfig {
   timeSlotInterval?: TimeSlotInterval;
   
   /**
-   * Callback function invoked when an event is clicked
-   * Optional - if not provided, events are not clickable
-   */
-  onEventClick?: (event: ScheduleEvent) => void;
-  
-  /**
    * Whether to show day headers at the top
    * Default: true
    */
@@ -321,6 +315,20 @@ export interface ScheduleConfig {
    * Default: Vertical (days as columns, time as rows)
    */
   orientation?: ScheduleOrientation;
+
+  /**
+   * Width of the schedule component
+   * Can be any valid CSS width value (e.g., "800px", "100%", "50vw")
+   * If not specified, component will size based on content
+   */
+  width?: string;
+
+  /**
+   * Height of the schedule component
+   * Can be any valid CSS height value (e.g., "600px", "100%", "50vh")
+   * If not specified, component will size based on content
+   */
+  height?: string;
 }
 
 /**

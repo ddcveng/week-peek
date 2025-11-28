@@ -6,7 +6,8 @@ import type {
   DayOfWeek
 } from './types';
 import type { Result } from './types/internal';
-import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation } from './types';
+ import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, TimeOnly, getDayName } from './types';
+
 import { validateConfig, validateEvent } from './utils/validators';
 import { calculateEventPosition, groupEventsByDay, assignLanes } from './utils/layoutHelpers';
 import { createTimeLabelHTML, generateTimeSlots } from './templates/timeAxisTemplate';
@@ -22,6 +23,9 @@ export class WeeklySchedule {
   private container: HTMLElement;
   private config: ScheduleConfig;
   private events: ScheduleEvent[];
+  private originalVisibleDays: DayOfWeek[];
+  private zoomedDay: DayOfWeek | null = null;
+
 
   /**
    * Factory method to create a WeeklySchedule instance with validation
@@ -91,31 +95,58 @@ export class WeeklySchedule {
       timeSlotInterval: config.timeSlotInterval ?? TimeSlotInterval.SixtyMinutes,
       showDayHeaders: config.showDayHeaders ?? true,
       className: config.className || '',
-      onEventClick: config.onEventClick,
       dayNameTranslations: config.dayNameTranslations,
       theme: config.theme || undefined,
-      orientation: config.orientation ?? ScheduleOrientation.Vertical
+      orientation: config.orientation ?? ScheduleOrientation.Vertical,
+      width: config.width,
+      height: config.height
     } as ScheduleConfig;
 
+    this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
+
+    this.attachEventListeners();
     this.render();
+
   }
 
   /**
    * Render the schedule component
    */
   render(): void {
-    const visibleEvents = this.events.filter(event => this.config.visibleDays!.includes(event.day));
+    // Filter events by visible days and time range
+    const startTime = new TimeOnly(this.config.startHour!, 0);
+    
+    const visibleEvents = this.events.filter(event => {
+      // Filter by visible days
+      if (!this.config.visibleDays!.includes(event.day)) {
+        return false;
+      }
+      
+      // Filter by time range - event must start within the visible time range
+      // Events that start before startHour are filtered out
+      // Events must start at or after startTime
+      return !event.startTime.isBefore(startTime);
+    });
     
     const axisConfiguration = this.getAxisConfiguration();
     const headerAxis = this.createAxis(ScheduleOrientation.Horizontal, axisConfiguration.headerAxisData);
     const crossAxis = this.createAxis(ScheduleOrientation.Vertical, axisConfiguration.crossAxisData);
 
+    // Build style string with CSS variables and optional width/height
+    let styleString = `--num-columns: ${axisConfiguration.numColumns}; --num-rows: ${axisConfiguration.numRows}; --header-height: ${axisConfiguration.headerHeight}; --cross-axis-width: ${axisConfiguration.crossAxisWidth};`;
+    if (this.config.width) {
+      styleString += ` width: ${this.config.width};`;
+    }
+    if (this.config.height) {
+      styleString += ` height: ${this.config.height};`;
+    }
+
     const html = `
       <div 
         class="weekly-schedule ${this.config.className!}"
-        style="--num-columns: ${axisConfiguration.numColumns}; --num-rows: ${axisConfiguration.numRows}; --header-height: ${axisConfiguration.headerHeight}; --cross-axis-width: ${axisConfiguration.crossAxisWidth};"
+        style="${styleString}"
       >
-        <div class="schedule-intersection"></div>
+        <div class="schedule-intersection">${this.renderIntersection()}</div>
         ${headerAxis}
         ${crossAxis}
         ${this.createEventsGrid(visibleEvents)}
@@ -123,10 +154,19 @@ export class WeeklySchedule {
     `;
 
     this.container.innerHTML = html;
-    this.attachEventListeners();
   }
 
+  private renderIntersection(): string {
+    if (this.zoomedDay === null) {
+      return '';
+    }
+    const label = getDayName(this.zoomedDay, this.config.dayNameTranslations);
+    return `<button class="zoom-reset-btn" aria-label="Back to week">Back to week</button><span class="zoom-breadcrumb">${label}</span>`;
+  }
+
+
   private getAxisConfiguration(): AxisConfiguration {
+
     const isHorizontal = this.config.orientation === ScheduleOrientation.Horizontal;
     const timeSlots = generateTimeSlots(this.config.startHour!, this.config.endHour!, this.config.timeSlotInterval!);
     
@@ -204,14 +244,10 @@ export class WeeklySchedule {
       laneInfo
     );
 
-    if (event.id === '5a') {
-      console.log(layout);
-    }
-
     // Use different rendering method based on orientation
     const eventHTML = this.config.orientation === ScheduleOrientation.Horizontal
-      ? createEventHTMLHorizontal(event)
-      : createEventHTML(event);
+      ? createEventHTMLHorizontal(event, laneInfo)
+      : createEventHTML(event, laneInfo);
     
     // Base grid positioning (integer cell positions)
     const gridStyle = `grid-row: ${layout.gridRowStart} / ${layout.gridRowEnd}; grid-column: ${layout.gridColumnStart} / ${layout.gridColumnEnd};`;
@@ -248,24 +284,53 @@ export class WeeklySchedule {
     }
   }
 
-  /**
-   * Attach event listeners for click handling
-   * @private
-   */
   private attachEventListeners(): void {
-    if (!this.config.onEventClick) return;
-    
-    this.container.addEventListener('click', (e) => {
-      const eventEl = (e.target as HTMLElement).closest('.event');
-      if (eventEl) {
-        const eventId = eventEl.getAttribute('data-event-id');
-        const event = this.events.find(ev => ev.id === eventId);
-        if (event && this.config.onEventClick) {
-          this.config.onEventClick(event);
-        }
+    this.container.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+
+      // Intersection reset button
+      const resetBtn = target.closest('.zoom-reset-btn');
+      if (resetBtn) {
+        this.resetZoom();
+        return;
       }
+
+      // Day header click to toggle zoom
+      const dayHeader = target.closest('.day-header');
+      if (dayHeader) {
+        const dayAttr = (dayHeader as HTMLElement).getAttribute('data-day');
+        if (dayAttr) {
+          const day = Number(dayAttr) as DayOfWeek;
+          if (this.zoomedDay === day) {
+            this.resetZoom();
+          } else {
+            this.zoomToDay(day);
+          }
+        }
+        return;
+      }
+
+      // Event click dispatch
+      const eventEl = target.closest('.event');
+      if (!eventEl) {
+        return;
+      }
+
+      const eventId = eventEl.getAttribute('data-event-id');
+      const scheduleEvent = this.events.find(ev => ev.id === eventId);
+      if (!scheduleEvent) {
+        return;
+      }
+
+      const customEvent = new CustomEvent('schedule-event-click', {
+        detail: { event: scheduleEvent },
+        bubbles: true,
+        cancelable: true
+      });
+      this.container.dispatchEvent(customEvent);
     });
   }
+
 
   /**
    * Get current events array (copy)
@@ -314,12 +379,27 @@ export class WeeklySchedule {
     };
   }
 
+  zoomToDay(day: DayOfWeek): void {
+    if (!this.originalVisibleDays) {
+      this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
+    }
+    this.zoomedDay = day;
+    this.updateConfig({ visibleDays: [day] });
+  }
+
+  resetZoom(): void {
+    if (this.zoomedDay === null) return;
+    this.zoomedDay = null;
+    this.updateConfig({ visibleDays: this.originalVisibleDays });
+  }
+
   /**
    * Update configuration and re-render
    * @param newConfig - Partial configuration to merge
    * @returns Result indicating success or failure
    */
   updateConfig(newConfig: Partial<ScheduleConfig>): Result<void, Error> {
+
     const mergedConfig: ScheduleConfig = {
       ...this.config,
       ...newConfig
@@ -341,10 +421,11 @@ export class WeeklySchedule {
       timeSlotInterval: mergedConfig.timeSlotInterval ?? this.config.timeSlotInterval!,
       showDayHeaders: mergedConfig.showDayHeaders ?? this.config.showDayHeaders!,
       className: mergedConfig.className || this.config.className!,
-      onEventClick: mergedConfig.onEventClick,
       dayNameTranslations: mergedConfig.dayNameTranslations,
       theme: mergedConfig.theme || undefined,
-      orientation: mergedConfig.orientation ?? this.config.orientation!
+      orientation: mergedConfig.orientation ?? this.config.orientation!,
+      width: mergedConfig.width ?? this.config.width,
+      height: mergedConfig.height ?? this.config.height
     } as ScheduleConfig;
 
     this.render();
