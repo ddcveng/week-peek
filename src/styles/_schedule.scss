@@ -200,9 +200,81 @@
   }
  }
 
- .weekly-schedule.zoomed .day-header.selected {
-  background: rgba($color-primary, 0.15);
- }
+  .weekly-schedule.zoomed .day-header.selected {
+   background: rgba($color-primary, 0.15);
+  }
+
+  /* Zoom hint CTA in intersection cell */
+  .zoom-hint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.2;
+  }
+  .zoom-hint-icon { opacity: 0.7; }
+
+  /* Overlay zoom affordance using pseudo-elements */
+  .day-header { position: relative; }
+  .day-header .day-header-label { transition: opacity .12s ease; }
+
+  /* Fade out label when overlay is shown */
+  .weekly-schedule:not(.zoomed) .day-header:hover .day-header-label,
+  .weekly-schedule:not(.zoomed) .day-header:focus-visible .day-header-label,
+  .weekly-schedule.zoomed .day-header:not(.selected):hover .day-header-label,
+  .weekly-schedule.zoomed .day-header:not(.selected):focus-visible .day-header-label,
+  .weekly-schedule.zoomed .day-header.selected:hover .day-header-label,
+  .weekly-schedule.zoomed .day-header.selected:focus-visible .day-header-label {
+    opacity: 0;
+    color: transparent;
+    visibility: hidden;
+  }
+
+  /* Non-selected day headers show zoom icon (normal or zoomed mode) */
+  .weekly-schedule:not(.zoomed) .day-header::after,
+  .weekly-schedule.zoomed .day-header:not(.selected)::after {
+    content: "🔍";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1em;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+    border-radius: inherit;
+  }
+  .weekly-schedule:not(.zoomed) .day-header:hover::after,
+  .weekly-schedule:not(.zoomed) .day-header:focus-visible::after,
+  .weekly-schedule.zoomed .day-header:not(.selected):hover::after,
+  .weekly-schedule.zoomed .day-header:not(.selected):focus-visible::after {
+    opacity: 1;
+  }
+
+  /* Selected zoomed day header shows unzoom icon */
+  .weekly-schedule.zoomed .day-header.selected::after {
+    content: "↺";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1em;
+    background: rgba($color-primary, 1);
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+    border-radius: inherit;
+  }
+  .weekly-schedule.zoomed .day-header.selected:hover::after,
+  .weekly-schedule.zoomed .day-header.selected:focus-visible::after {
+    opacity: 1;
+  }
 
 
 /**

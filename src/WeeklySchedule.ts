@@ -164,7 +164,7 @@ export class WeeklySchedule {
 
     private renderIntersection(): string {
       if (this.zoomedDay === null) {
-        return '';
+        return '<div class="zoom-hint" aria-live="polite"><span class="zoom-hint-icon" aria-hidden="true">🔍</span> Click a day header to zoom</div>';
       }
       return `<button class="zoom-reset-btn" aria-label="Back to week">Back to week</button>`;
     }

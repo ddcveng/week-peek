@@ -17,7 +17,8 @@ export function createDayHeaderHTML(
   const isSelected = selectedDay === day;
   const selectedClass = isSelected ? ' selected' : '';
   const selectedAttr = isSelected ? ' data-selected="1"' : '';
-  return `<div class="day-header${selectedClass}" data-day="${day}"${selectedAttr}>${dayName}</div>`;
+  const ariaLabel = isSelected ? `Return to full week` : `Zoom to ${dayName}`;
+  return `<div class="day-header${selectedClass}" role="button" tabindex="0" aria-label="${ariaLabel}" data-day="${day}"${selectedAttr}><span class="day-header-label">${dayName}</span></div>`;
 }
 
 
