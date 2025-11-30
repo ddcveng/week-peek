@@ -85,7 +85,7 @@
  }
 
  .weekly-schedule.zoomed .day-header {
-  font-size: $font-size-base;
+  //background: gray;
  }
 
 
@@ -176,7 +176,7 @@
 /**
  * Day header
  */
-.day-header {
+ .day-header {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,12 +186,18 @@
   background: var(--schedule-bg-color, $color-bg-header);
   padding: $spacing-sm $spacing-md;
   flex: 1;
+  cursor: pointer;
   
   // Horizontal orientation: headers are in vertical axis
   .axis-vertical & {
     height: $day-header-height; // Match header height
   }
-}
+ }
+
+ .weekly-schedule.zoomed .day-header.selected {
+  background: rgba($color-primary, 0.15);
+ }
+
 
 /**
  * Events grid - nested grid containing only events

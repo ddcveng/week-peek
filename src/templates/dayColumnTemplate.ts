@@ -10,9 +10,14 @@ import type { DayNameTranslations } from '../types';
  */
 export function createDayHeaderHTML(
   day: DayOfWeek,
-  translations?: DayNameTranslations
+  translations?: DayNameTranslations,
+  selectedDay?: DayOfWeek | null
 ): string {
   const dayName = getDayName(day, translations);
-  return `<div class="day-header" data-day="${day}">${dayName}</div>`;
+  const isSelected = selectedDay === day;
+  const selectedClass = isSelected ? ' selected' : '';
+  const selectedAttr = isSelected ? ' data-selected="1"' : '';
+  return `<div class="day-header${selectedClass}" data-day="${day}"${selectedAttr}>${dayName}</div>`;
 }
+
 

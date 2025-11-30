@@ -178,7 +178,8 @@ export class WeeklySchedule {
     const isHorizontal = this.config.orientation === ScheduleOrientation.Horizontal;
     const timeSlots = generateTimeSlots(this.config.startHour!, this.config.endHour!, this.config.timeSlotInterval!);
     
-    const daysHtml = this.config.visibleDays!.map(day => createDayHeaderHTML(day, this.config.dayNameTranslations)).join('');
+    const daysForHeader = this.originalVisibleDays || this.config.visibleDays!;
+    const daysHtml = daysForHeader.map(day => createDayHeaderHTML(day, this.config.dayNameTranslations, this.zoomedDay)).join('');
     const timeSlotsHtml = timeSlots.map(time => createTimeLabelHTML(time)).join('');
   
     if (isHorizontal) {
