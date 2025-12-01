@@ -43,11 +43,15 @@ const events: ScheduleEvent[] = [
   createEvent('4', DayOfWeek.Wednesday, 13, 0, 14, 0, 'Design Review', '#f59e0b', 'Review new designs'),
   createEvent('4a', DayOfWeek.Wednesday, 12, 30, 13, 30, 'Design Workshop', '#a855f7', 'Overlaps with review'),
   createEvent('4b', DayOfWeek.Wednesday, 13, 45, 14, 30, 'Follow-up', '#14b8a6', 'Overlaps with review'),
-  
-  // Thursday - multiple overlapping events
-  createEvent('5', DayOfWeek.Thursday, 10, 0, 11, 0, 'Team Meeting', '#6366f1', 'Weekly team meeting'),
-  createEvent('5a', DayOfWeek.Thursday, 10, 15, 10, 45, 'Quick Update', '#ec4899', 'Fully within team meeting'),
-  createEvent('5b', DayOfWeek.Thursday, 10, 30, 11, 30, 'Project Sync', '#22c55e', 'Overlaps with team meeting'),
+   
+  // Thursday - one event in the morning then a big cluster in the afternoon
+  createEvent('55', DayOfWeek.Thursday, 10, 0, 11, 0, 'Team Meeting', '#6366f1', 'Weekly team meeting'),
+
+  createEvent('5', DayOfWeek.Thursday, 15, 0, 16, 0, 'Team Meeting', '#6366f1', 'Weekly team meeting'),
+  createEvent('5a', DayOfWeek.Thursday, 15, 15, 16, 45, 'Quick Update', '#ec4899', 'Fully within team meeting'),
+  createEvent('5b', DayOfWeek.Thursday, 15, 30, 16, 30, 'Project Sync', '#22c55e', 'Overlaps with team meeting'),
+  createEvent('5c', DayOfWeek.Thursday, 15, 30, 16, 30, 'Project Clink', '#22c88f', 'Overlaps with team meeting also'),
+  createEvent('5d', DayOfWeek.Thursday, 15, 0, 16, 0, 'Team Meeting 2', '#6366f1', 'Weekly team meeting'),
   
   // Friday
   createEvent('6', DayOfWeek.Friday, 15, 0, 16, 0, 'Retro', '#ec4899', 'Sprint retrospective')
@@ -57,16 +61,23 @@ const events: ScheduleEvent[] = [
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
 app.innerHTML = `
-  <div style="padding: 20px; max-width: 1400px; margin: 0 auto;">
+  <div style="padding: 20px; width: min(1280px, 100%); margin: 0 auto;">
     <h1 style="margin-bottom: 20px; color: #111827;">Weekly Schedule Component</h1>
     <p style="margin-bottom: 20px; color: #6b7280;">Demo of the weekly schedule component with sample events.</p>
-    <div id="schedule-container"></div>
+    <div id="schedule-container" style="width: min(1280px, 100%); height: 600px; margin: 0 auto;"></div>
   </div>
 `;
 
 const scheduleContainer = document.getElementById('schedule-container')!;
 
 // Create schedule instance using factory method
+// Inject Google Material Symbols stylesheet for icons
+const materialLink = document.createElement('link');
+materialLink.rel = 'stylesheet';
+materialLink.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0';
+document.head.appendChild(materialLink);
+
+
 const result = WeeklySchedule.create(
   scheduleContainer,
   {
@@ -80,8 +91,20 @@ const result = WeeklySchedule.create(
     ],
     startHour: 9,
     endHour: 17,
-    width: '1200px',  // Set component width
-    height: '600px',  // Set component height - axes will stretch to fill space
+    icons: {
+      className: 'material-symbols-outlined',
+      zoom: 'zoom_in',
+      unzoom: 'close_fullscreen',
+      cta: 'zoom_in'
+    },
+    // Example tooltip function - shows event details on hover
+    getEventTooltip: (event) => {
+      return `
+        <strong>${event.title}</strong><br>
+        <small>${event.startTime.toString()} - ${event.endTime.toString()}</small><br>
+        ${event.description || 'No description'}
+      `;
+    }
   },
   events
 );

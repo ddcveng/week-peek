@@ -1,0 +1,124 @@
+@use 'variables' as *;
+@use 'sass:color';
+
+.weekly-schedule.mobile {
+  display: block;
+  height: auto;
+  border: none;
+  border-radius: 0;
+
+  .schedule-left,
+  .schedule-scroll,
+  .schedule-top,
+  .schedule-main {
+    display: none;
+  }
+}
+
+.mobile-day-block {
+  margin-bottom: 1.5rem;
+}
+
+.mobile-day-header {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--schedule-grid-line-color, $color-border);
+  margin-bottom: 0.75rem;
+  color: var(--schedule-header-text-color, $color-text-primary);
+}
+
+.mobile-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-event {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--schedule-bg-color, $color-bg-alt);
+  border-radius: $border-radius-md;
+  border-left: 5px solid; // Color will be set inline
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: color.scale($color-bg-alt, $lightness: -5%);
+  }
+}
+
+.mobile-event-time {
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-sm;
+  color: var(--schedule-primary-color, $color-primary);
+  flex-shrink: 0;
+}
+
+.mobile-event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mobile-event-title {
+  font-weight: $font-weight-medium;
+  color: var(--schedule-header-text-color, $color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-event-duration {
+  font-size: $font-size-xs;
+  color: var(--schedule-time-text-color, $color-text-secondary);
+}
+
+.mobile-no-events {
+  padding: 1rem;
+  text-align: center;
+  color: var(--schedule-time-text-color, $color-text-secondary);
+  font-style: italic;
+}
+
+// Fullscreen Popover
+.schedule-popover {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.popover-content {
+  background: var(--schedule-bg-color, $color-bg);
+  border-radius: $border-radius-lg;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.popover-close-.btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: var(--schedule-time-text-color, $color-text-secondary);
+
+  &:hover {
+    color: var(--schedule-header-text-color, $color-text-primary);
+  }
+}

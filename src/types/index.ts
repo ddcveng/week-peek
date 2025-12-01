@@ -317,30 +317,16 @@ export interface ScheduleConfig {
   orientation?: ScheduleOrientation;
 
   /**
-   * Width of the schedule component
-   * Can be any valid CSS width value (e.g., "800px", "100%", "50vw")
-   * If not specified, component will size based on content
-   */
-  width?: string;
-
-  /**
-   * Height of the schedule component
-   * Can be any valid CSS height value (e.g., "600px", "100%", "50vh")
-   * If not specified, component will size based on content
-   */
-  height?: string;
-
-  /**
    * Icon configuration (replaces previous separate iconClass + icons fields)
    */
   icons?: IconConfig;
 
   /**
-   * Optional callback to get tooltip content for events on hover
-   * Return a string for tooltip content, or false/null/undefined to show no tooltip
-   * If not provided, no tooltips will be shown
+   * Optional function to generate custom HTML content for the event tooltip/popover.
+   * @param event The event data.
+   * @returns An HTML string.
    */
-  getEventTooltip?: (event: ScheduleEvent) => string | false | null | undefined;
+  getEventTooltip?: (event: ScheduleEvent) => string;
 }
 
 /**
