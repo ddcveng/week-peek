@@ -23,6 +23,7 @@ export class WeeklySchedule {
   private container: HTMLElement;
   private config: ScheduleConfig;
   private events: ScheduleEvent[];
+  private allEvents: ScheduleEvent[];
    private originalVisibleDays: DayOfWeek[];
    private zoomedDay: DayOfWeek | null = null;
 
@@ -89,6 +90,7 @@ export class WeeklySchedule {
   private constructor(container: HTMLElement, config: ScheduleConfig, events: ScheduleEvent[] = []) {
     this.container = container;
     this.events = [...events];
+    this.allEvents = [...events];
     this.config = {
       visibleDays: config.visibleDays || [...WORK_WEEK_DAYS],
       startHour: config.startHour ?? 9,
@@ -457,6 +459,47 @@ export class WeeklySchedule {
   }
 
   /**
+   * Filter events at runtime using a predicate function.
+   * The predicate receives each event and should return true to keep it, false to remove it.
+   * Triggers a re-render on success.
+   */
+  filterEvents(predicate: (event: ScheduleEvent) => boolean): Result<void, Error> {
+    try {
+      if (typeof predicate !== 'function') {
+        return {
+          success: false,
+          error: new Error('Predicate must be a function')
+        };
+      }
+      this.events = this.allEvents.filter(ev => {
+        try {
+          return !!predicate(ev);
+        } catch (e) {
+          // If predicate throws, treat as "do not include"
+          return false;
+        }
+      });
+      this.render();
+      return { success: true, data: undefined };
+    } catch (err) {
+      return { success: false, error: err as Error };
+    }
+  }
+
+  /**
+   * Clear any active event filtering and restore original events.
+   */
+  clearFilter(): Result<void, Error> {
+    try {
+      this.events = [...this.allEvents];
+      this.render();
+      return { success: true, data: undefined };
+    } catch (err) {
+      return { success: false, error: err as Error };
+    }
+  }
+
+  /**
    * Get current configuration (copy)
    */
   getConfig(): ScheduleConfig {
@@ -488,6 +531,7 @@ export class WeeklySchedule {
     }
     
     this.events = [...events];
+    this.allEvents = [...events];
     this.render();
     
     return {
