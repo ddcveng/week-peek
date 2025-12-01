@@ -28,8 +28,6 @@ export class WeeklySchedule {
    private zoomedDay: DayOfWeek | null = null;
    private pendingScrollTargetId: string | null = null;
    private resizeObserver: ResizeObserver;
-   //private observedElement: HTMLElement | null = null;
-
 
   /**
    * Factory method to create a WeeklySchedule instance with validation
@@ -262,9 +260,6 @@ export class WeeklySchedule {
       return `<button class="zoom-reset-btn" aria-label="Back to week">Back to week</button>`;
     }
 
-
-
-
   private getAxisConfiguration(): AxisConfiguration {
 
     const isHorizontal = this.config.orientation === ScheduleOrientation.Horizontal;
@@ -308,9 +303,8 @@ export class WeeklySchedule {
    * @private
    */
   private createEventsGrid(events: ScheduleEvent[]): string {
-     // Constants for overflow handling (normal mode only)
-     const OVERLAP_HIDE_THRESHOLD = 3; // if group size > 3
-     const OVERLAP_VISIBLE_COUNT = 2; // show first 2
+     const OVERLAP_HIDE_THRESHOLD = 3;
+     const OVERLAP_VISIBLE_COUNT = 2; 
 
      const eventsByDay = groupEventsByDay(events);
      const laneMaps = new Map<DayOfWeek, Map<string, LaneInfo>>();
