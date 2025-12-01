@@ -334,6 +334,13 @@ export interface ScheduleConfig {
    * Icon configuration (replaces previous separate iconClass + icons fields)
    */
   icons?: IconConfig;
+
+  /**
+   * Optional callback to get tooltip content for events on hover
+   * Return a string for tooltip content, or false/null/undefined to show no tooltip
+   * If not provided, no tooltips will be shown
+   */
+  getEventTooltip?: (event: ScheduleEvent) => string | false | null | undefined;
 }
 
 /**

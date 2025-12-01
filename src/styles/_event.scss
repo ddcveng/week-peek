@@ -78,3 +78,22 @@
   width: 100%; // Take full width for proper text wrapping
 }
 
+/**
+ * Event tooltip (shown on hover)
+ */
+.schedule-event-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $event-border-radius;
+  box-shadow: $shadow-lg;
+  padding: $spacing-sm $spacing-md;
+  pointer-events: none;
+  max-width: 300px;
+  word-wrap: break-word;
+  font-size: $font-size-sm;
+  line-height: 1.4;
+  color: $color-text-primary;
+}
+

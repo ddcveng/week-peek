@@ -173,6 +173,17 @@ export function validateConfig(config: unknown): Result<void, ValidationError[]>
       });
     }
   }
+
+  // Validate getEventTooltip
+  if (c.getEventTooltip !== undefined) {
+    if (typeof c.getEventTooltip !== 'function') {
+      errors.push({
+        field: 'getEventTooltip',
+        message: 'getEventTooltip must be a function if provided',
+        value: c.getEventTooltip
+      });
+    }
+  }
   
   if (errors.length > 0) {
     return { success: false, error: errors };

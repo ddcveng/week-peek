@@ -7,6 +7,7 @@ import type {
 } from './types';
 import type { Result } from './types/internal';
 import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, TimeOnly, IconConfig } from './types';
+import { computePosition, autoUpdate, flip, shift, offset } from '@floating-ui/dom';
 
 import { validateConfig, validateEvent } from './utils/validators';
 import { calculateEventPosition, groupEventsByDay, assignLanes } from './utils/layoutHelpers';
@@ -26,7 +27,9 @@ export class WeeklySchedule {
   private allEvents: ScheduleEvent[];
    private originalVisibleDays: DayOfWeek[];
    private zoomedDay: DayOfWeek | null = null;
-  private pendingScrollTargetId: string | null = null;
+   private pendingScrollTargetId: string | null = null;
+   private tooltipElement: HTMLElement | null = null;
+   private tooltipCleanup: (() => void) | null = null;
 
 
 
@@ -104,7 +107,8 @@ export class WeeklySchedule {
       orientation: config.orientation ?? ScheduleOrientation.Vertical,
       width: config.width,
       height: config.height,
-      icons: config.icons
+      icons: config.icons,
+      getEventTooltip: config.getEventTooltip
     } as ScheduleConfig;
 
     this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
@@ -153,47 +157,58 @@ export class WeeklySchedule {
     if (this.zoomedDay !== null && this.config.orientation === ScheduleOrientation.Vertical) {
       styleString += ' --slot-row-height: 64px;';
     }
-    let html: string;
+
+    // Clear existing content
+    this.container.innerHTML = '';
+
+    // Create the main schedule container
+    const scheduleContainer = document.createElement('div');
+    scheduleContainer.className = `weekly-schedule ${orientationClass} ${zoomClass} ${this.config.className!}`;
+    scheduleContainer.style.cssText = styleString;
+
     if (this.config.orientation === ScheduleOrientation.Horizontal) {
       // Horizontal: use a left column for day headers; time axis + events are in scroll to the right
-      html = `
-        <div 
-          class="weekly-schedule ${orientationClass} ${zoomClass} ${this.config.className!}"
-          style="${styleString}"
-        >
-          <div class="schedule-left">
-            <div class="schedule-intersection">${this.renderIntersection()}</div>
-            ${crossAxis}
-          </div>
-          <div class="schedule-scroll">
-            ${headerAxis}
-            ${this.createEventsGrid(visibleEvents)}
-          </div>
-        </div>
-      `;
+      const scheduleLeft = document.createElement('div');
+      scheduleLeft.className = 'schedule-left';
+
+      const scheduleIntersection = document.createElement('div');
+      scheduleIntersection.className = 'schedule-intersection';
+      scheduleIntersection.innerHTML = this.renderIntersection();
+      scheduleLeft.appendChild(scheduleIntersection);
+      scheduleLeft.innerHTML += crossAxis;
+
+      const scheduleScroll = document.createElement('div');
+      scheduleScroll.className = 'schedule-scroll';
+      scheduleScroll.innerHTML = headerAxis;
+      scheduleScroll.appendChild(this.createEventsGrid(visibleEvents));
+
+      scheduleContainer.appendChild(scheduleLeft);
+      scheduleContainer.appendChild(scheduleScroll);
     } else {
       // Vertical: day headers remain in top section; time axis + events scroll vertically
-      html = `
-        <div 
-          class="weekly-schedule ${orientationClass} ${zoomClass} ${this.config.className!}"
-          style="${styleString}"
-        >
-          <div class="schedule-top">
-            <div class="schedule-intersection">${this.renderIntersection()}</div>
-            ${headerAxis}
-          </div>
-          <div class="schedule-main">
-            <div class="schedule-scroll">
-              ${crossAxis}
-              ${this.createEventsGrid(visibleEvents)}
-            </div>
-          </div>
-        </div>
-      `;
+      const scheduleTop = document.createElement('div');
+      scheduleTop.className = 'schedule-top';
+
+      const scheduleIntersection = document.createElement('div');
+      scheduleIntersection.className = 'schedule-intersection';
+      scheduleIntersection.innerHTML = this.renderIntersection();
+      scheduleTop.appendChild(scheduleIntersection);
+      scheduleTop.innerHTML += headerAxis;
+
+      const scheduleMain = document.createElement('div');
+      scheduleMain.className = 'schedule-main';
+
+      const scheduleScroll = document.createElement('div');
+      scheduleScroll.className = 'schedule-scroll';
+      scheduleScroll.innerHTML = crossAxis;
+      scheduleScroll.appendChild(this.createEventsGrid(visibleEvents));
+
+      scheduleMain.appendChild(scheduleScroll);
+      scheduleContainer.appendChild(scheduleTop);
+      scheduleContainer.appendChild(scheduleMain);
     }
 
-
-    this.container.innerHTML = html;
+    this.container.appendChild(scheduleContainer);
 
     // If zoomed to a single day, scroll to earliest event for that day
     if (this.zoomedDay !== null) {
@@ -271,10 +286,10 @@ export class WeeklySchedule {
   }
 
   /**
-   * Create events grid HTML
+   * Create events grid container with positioned events
    * @private
    */
-   private createEventsGrid(events: ScheduleEvent[]): string {
+  private createEventsGrid(events: ScheduleEvent[]): HTMLElement {
      // Constants for overflow handling (normal mode only)
      const OVERLAP_HIDE_THRESHOLD = 3; // if group size > 3
      const OVERLAP_VISIBLE_COUNT = 2; // show first 2
@@ -282,18 +297,21 @@ export class WeeklySchedule {
      const eventsByDay = groupEventsByDay(events);
      const laneMaps = new Map<DayOfWeek, Map<string, LaneInfo>>();
 
+     // Create the events grid container
+     const eventsGrid = document.createElement('div');
+     eventsGrid.className = 'events-grid';
+
      // If zoomed, render all events without compression
      if (this.zoomedDay !== null) {
        for (const [day, dayEvents] of eventsByDay.entries()) {
          laneMaps.set(day, assignLanes(dayEvents));
        }
-       const positionedZoomEvents = events
-         .map(event => {
-           const laneInfo = laneMaps.get(event.day)?.get(event.id);
-           return this.createPositionedEvent(event, laneInfo);
-         })
-         .join('');
-       return `<div class="events-grid">${positionedZoomEvents}</div>`;
+       events.forEach(event => {
+         const laneInfo = laneMaps.get(event.day)?.get(event.id);
+         const eventElement = this.createPositionedEvent(event, laneInfo);
+         eventsGrid.appendChild(eventElement);
+       });
+       return eventsGrid;
      }
 
      // Normal mode: compress conflict groups per day
@@ -342,14 +360,13 @@ export class WeeklySchedule {
        laneMaps.set(day, assignLanes(compressedDayEvents));
      }
 
-     const positionedEvents = compressedEvents
-       .map(event => {
-         const laneInfo = laneMaps.get(event.day)?.get(event.id);
-         return this.createPositionedEvent(event, laneInfo);
-       })
-       .join('');
+     compressedEvents.forEach(event => {
+       const laneInfo = laneMaps.get(event.day)?.get(event.id);
+       const eventElement = this.createPositionedEvent(event, laneInfo);
+       eventsGrid.appendChild(eventElement);
+     });
 
-     return `<div class="events-grid">${positionedEvents}</div>`;
+     return eventsGrid;
    }
 
   /**
@@ -359,7 +376,7 @@ export class WeeklySchedule {
    * @param laneInfo - Optional lane assignment for overlapping events
    * @private
    */
-  private createPositionedEvent(event: ScheduleEvent, laneInfo?: LaneInfo): string {
+  private createPositionedEvent(event: ScheduleEvent, laneInfo?: LaneInfo): HTMLElement {
     const layout = calculateEventPosition(
       event,
       this.config.startHour!,
@@ -373,10 +390,19 @@ export class WeeklySchedule {
     const eventHTML = this.config.orientation === ScheduleOrientation.Horizontal
       ? createEventHTMLHorizontal(event, laneInfo)
       : createEventHTML(event, laneInfo);
-    
+
+    // Create the event element
+    const eventElement = document.createElement('div');
+    eventElement.innerHTML = eventHTML;
+    const actualEventElement = eventElement.firstElementChild as HTMLElement;
+
+    if (!actualEventElement) {
+      throw new Error('Failed to create event element');
+    }
+
     // Base grid positioning (integer cell positions)
     const gridStyle = `grid-row: ${layout.gridRowStart} / ${layout.gridRowEnd}; grid-column: ${layout.gridColumnStart} / ${layout.gridColumnEnd};`;
-    
+
     // Add absolute positioning for fractional offsets
     // Positioning values are calculated in calculateEventPosition based on orientation
     // Both time-based positioning and lane-based positioning are always applied
@@ -393,24 +419,79 @@ export class WeeklySchedule {
     if (layout.heightPercent !== undefined) {
       positioningStyle += ` height: ${layout.heightPercent}%;`;
     }
-    
+
     const fullStyle = `${gridStyle} ${positioningStyle}`;
-    
-    if (eventHTML.includes('style="')) {
-      return eventHTML.replace(
-        'style="',
-        `style="${fullStyle} `
-      );
-    } else {
-      return eventHTML.replace(
-        'class="event',
-        `class="event" style="${fullStyle}`
-      );
+    actualEventElement.style.cssText += fullStyle;
+
+    // Add tooltip event listeners if tooltip function is configured and this is not an overflow indicator
+    if (this.config.getEventTooltip && event.className !== 'event-overflow-indicator') {
+      actualEventElement.addEventListener('mouseenter', () => {
+        const tooltipContent = this.config.getEventTooltip!(event);
+
+        // Only show tooltip if content is a non-empty string
+        if (typeof tooltipContent !== 'string' || tooltipContent.trim() === '') {
+          return;
+        }
+
+        // Clean up any existing tooltip first
+        this.hideTooltip();
+
+        // Create tooltip element
+        this.tooltipElement = document.createElement('div');
+        this.tooltipElement.className = 'schedule-event-tooltip';
+        this.tooltipElement.innerHTML = tooltipContent;
+        document.body.appendChild(this.tooltipElement);
+
+        // Position tooltip using Floating UI
+        this.tooltipCleanup = autoUpdate(
+          actualEventElement,
+          this.tooltipElement,
+          () => {
+            computePosition(actualEventElement, this.tooltipElement!, {
+              placement: 'top',
+              middleware: [
+                offset(6),
+                flip(),
+                shift({ padding: 8 })
+              ]
+            }).then(({ x, y }) => {
+              Object.assign(this.tooltipElement!.style, {
+                left: `${x}px`,
+                top: `${y}px`
+              });
+            });
+          }
+        );
+      });
+
+      actualEventElement.addEventListener('mouseleave', () => {
+        this.hideTooltip();
+      });
     }
+
+    return actualEventElement;
+  }
+
+  private hideTooltip(): void {
+    // Clean up tooltip
+    if (this.tooltipCleanup) {
+      this.tooltipCleanup();
+      this.tooltipCleanup = null;
+    }
+    if (this.tooltipElement && this.tooltipElement.parentNode) {
+      this.tooltipElement.parentNode.removeChild(this.tooltipElement);
+    }
+    this.tooltipElement = null;
+  }
+
+  private setupTooltipLogic(): void {
+    // This method is now empty - tooltips are set up directly on event elements
+    // when they are rendered in createPositionedEvent
   }
 
   private attachEventListeners(): void {
-     this.container.addEventListener('click', (e: Event) => {
+    this.setupTooltipLogic();
+    this.container.addEventListener('click', (e: Event) => {
        const target = e.target as HTMLElement;
  
        // Intersection reset button
@@ -637,7 +718,8 @@ export class WeeklySchedule {
       theme: mergedConfig.theme || undefined,
       orientation: mergedConfig.orientation ?? this.config.orientation!,
       width: mergedConfig.width ?? this.config.width,
-      height: mergedConfig.height ?? this.config.height
+      height: mergedConfig.height ?? this.config.height,
+      getEventTooltip: mergedConfig.getEventTooltip ?? this.config.getEventTooltip
     } as ScheduleConfig;
 
     this.render();
@@ -652,6 +734,16 @@ export class WeeklySchedule {
    * Clean up component and remove event listeners
    */
   destroy(): void {
+    // Clean up any active tooltip
+    if (this.tooltipCleanup) {
+      this.tooltipCleanup();
+      this.tooltipCleanup = null;
+    }
+    if (this.tooltipElement && this.tooltipElement.parentNode) {
+      this.tooltipElement.parentNode.removeChild(this.tooltipElement);
+      this.tooltipElement = null;
+    }
+
     this.container.innerHTML = '';
     this.events = [];
   }
