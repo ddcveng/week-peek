@@ -84,41 +84,23 @@
   font-style: italic;
 }
 
-// Fullscreen Popover
+// Tooltip styling (used for desktop hover); on mobile we won't display it
 .schedule-popover {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: absolute;
+  background: transparent;
+  display: none; // toggled to flex by JS when showing
   z-index: 1000;
-  padding: 1rem;
+  padding: 0;
+  pointer-events: none; // hover-only, ignore pointer
 }
 
 .popover-content {
   background: var(--schedule-bg-color, $color-bg);
-  border-radius: $border-radius-lg;
-  padding: 1.5rem;
-  max-width: 500px;
-  width: 100%;
-  position: relative;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-}
-
-.popover-close-.btn {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0.5rem;
-  color: var(--schedule-time-text-color, $color-text-secondary);
-
-  &:hover {
-    color: var(--schedule-header-text-color, $color-text-primary);
-  }
+  border-radius: $border-radius-sm;
+  padding: 0.5rem 0.75rem;
+  max-width: 280px;
+  width: max-content;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  border: 1px solid var(--schedule-grid-line-color, $color-border);
+  font-size: $font-size-sm;
 }
