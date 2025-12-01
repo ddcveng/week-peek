@@ -329,6 +329,11 @@ export interface ScheduleConfig {
    * If not specified, component will size based on content
    */
   height?: string;
+
+  /**
+   * Icon configuration (replaces previous separate iconClass + icons fields)
+   */
+  icons?: IconConfig;
 }
 
 /**
@@ -401,4 +406,18 @@ export interface AxisConfiguration {
   numRows: number;
   headerAxisData: string;
   crossAxisData: string;
+}
+
+/**
+ * Icon configuration object passed through component instead of using globals
+ */
+export interface IconConfig {
+  /** CSS class applied to icon span elements (e.g., material-symbols-outlined) */
+  className?: string;
+  /** Icon text for zoom affordance */
+  zoom?: string;
+  /** Icon text for unzoom affordance */
+  unzoom?: string;
+  /** Icon text for intersection CTA hint */
+  cta?: string;
 }

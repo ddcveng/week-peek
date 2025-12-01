@@ -7,48 +7,97 @@
  .weekly-schedule {
   --header-height: $day-header-height;
   --cross-axis-width: $time-axis-width;
-  
-  display: grid;
-  grid-template-columns: var(--cross-axis-width) 1fr;
-  grid-template-rows: var(--header-height) 1fr;
+  display: flex;
+  flex-direction: column;
   background: var(--schedule-bg-color, $color-bg);
   border: 1px solid var(--schedule-grid-line-color, $color-border);
   border-radius: 8px;
   overflow: hidden;
   font-family: var(--schedule-font-family, $font-family);
-  min-width: 0; // Prevent grid overflow
+  min-width: 0;
  }
 
- .schedule-intersection {
-  grid-column: 1;
-  grid-row: 1;
- }
-
- .axis-vertical {
-  grid-column: 1;
-  grid-row: 2;
- }
-
- .schedule-scroll {
-  grid-column: 2;
-  grid-row: 1 / span 2;
+ .schedule-top {
   display: grid;
-  grid-template-rows: var(--header-height) 1fr;
+  grid-template-columns: var(--cross-axis-width) 1fr;
+  height: var(--header-height);
+  min-width: 0;
+ }
+/* Ensure header height is consistent in vertical zoom and non-zoom */
+.weekly-schedule.vertical .schedule-top { height: var(--header-height); }
+.weekly-schedule.zoomed.vertical .schedule-top { height: var(--header-height); }
+.weekly-schedule.vertical .schedule-top .axis-horizontal { height: var(--header-height); }
+.weekly-schedule.zoomed.vertical .schedule-top .axis-horizontal { height: var(--header-height); }
+
+ .schedule-top-spacer {
+  background: var(--schedule-bg-color, $color-bg-alt);
+  border-bottom: 1px solid var(--schedule-grid-line-color, $color-border);
+ }
+
+.schedule-main { display: none; }
+ .schedule-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden; // normal mode default
+  overflow: hidden; // overridden per orientation
+  display: grid;
  }
 
 
+.weekly-schedule.horizontal .schedule-main {
+  display: grid;
+  grid-template-columns: var(--cross-axis-width) 1fr;
+}
 
-.weekly-schedule.zoomed.horizontal .schedule-scroll {
+.weekly-schedule.horizontal .schedule-main > .axis-vertical {
+  grid-column: 1;
+  grid-row: 1;
+  height: 100%;
+}
+
+.weekly-schedule.horizontal .schedule-main > .schedule-scroll {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.weekly-schedule.horizontal .schedule-scroll {
+  grid-template-rows: var(--header-height) 1fr;
+  grid-template-columns: 1fr;
   overflow-x: auto;
   overflow-y: hidden;
 }
 
-.weekly-schedule.zoomed.vertical .schedule-scroll {
+.weekly-schedule.horizontal .schedule-scroll .axis-horizontal {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.weekly-schedule.horizontal .schedule-scroll .events-grid {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.weekly-schedule.vertical .schedule-main {
+  display: block;
+  height: 100%;
+}
+
+.weekly-schedule.vertical .schedule-scroll {
+  grid-template-columns: var(--cross-axis-width) 1fr;
+  grid-template-rows: 1fr;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.weekly-schedule.vertical .schedule-scroll .axis-vertical {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.weekly-schedule.vertical .schedule-scroll .events-grid {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 
@@ -95,15 +144,22 @@
  }
 
 
-/**
- * Horizontal axis (day headers or time labels)
- */
+ /**
+  * Horizontal axis (day headers or time labels)
+  * Always a flex row
+  */
+  .axis-horizontal {
+    display: flex;
+    flex-direction: row;
+    min-width: 0;
+  }
+  .axis-horizontal > * { flex: 1 1 0; }
 
-
- // Normal mode: fluid columns
- .weekly-schedule.horizontal .axis-horizontal {
-   grid-template-columns: repeat(var(--num-columns, 8), 1fr);
- }
+  // Fixed hour width in zoomed horizontal mode
+  .weekly-schedule.zoomed.horizontal .axis-horizontal > * {
+    flex: 0 0 var(--hour-col-width, 160px);
+  }
+  .weekly-schedule.zoomed.horizontal .axis-horizontal { width: max-content; }
 
  // Fixed hour width in zoomed horizontal mode
  .weekly-schedule.zoomed.horizontal .axis-horizontal {
@@ -116,22 +172,28 @@
 /**
  * Vertical axis (time labels)
  */
-.axis-vertical {
+ .axis-vertical {
   display: flex;
   flex-direction: column;
   min-height: 0; // Allow flex to shrink
+  height: 100%; // Span full component height
   
-  // Dividers between children
+  // Equal growth for children
   > * {
-    border-bottom: 1px solid var(--schedule-grid-line-color, $color-border);
-    flex: 1; // Stretch to fill available space
+    flex: 1 1 0;
     min-height: 0; // Allow shrinking
-    
-    &:last-child {
-      border-bottom: none;
-    }
   }
-}
+ }
+
+ // Fixed slot height in zoomed vertical mode (scrolls)
+ /* Keep row height consistent between zoomed and unzoomed in vertical mode */
+ .weekly-schedule.zoomed.vertical .axis-vertical {
+  height: 100%;
+ }
+ .weekly-schedule.zoomed.vertical .axis-vertical > * {
+  flex: 1 1 0;
+  min-height: 0;
+ }
 
 /**
  * Time label
@@ -174,8 +236,9 @@
  .weekly-schedule.vertical .axis-vertical .time-label {
   align-self: flex-start;
  }
+ /* Maintain same row sizing when zoomed */
  .weekly-schedule.zoomed.vertical .axis-vertical {
-  grid-template-rows: repeat(var(--num-rows), var(--slot-row-height, 48px));
+  grid-template-rows: repeat(var(--num-rows), 1fr);
  }
 
 
@@ -231,48 +294,36 @@
     visibility: hidden;
   }
 
-  /* Non-selected day headers show zoom icon (normal or zoomed mode) */
-  .weekly-schedule:not(.zoomed) .day-header::after,
-  .weekly-schedule.zoomed .day-header:not(.selected)::after {
-    content: "🔍";
+  /* Inline icon overlay span centered; replaces ::after content */
+  .day-header .day-header-icon {
     position: absolute;
     inset: 0;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     font-size: 1.1em;
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+    border-radius: inherit;
+  }
+  /* Backgrounds for overlay */
+  .weekly-schedule:not(.zoomed) .day-header .day-header-icon,
+  .weekly-schedule.zoomed .day-header:not(.selected) .day-header-icon {
     background: rgba(0,0,0,0.45);
-    color: #fff;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s ease;
-    border-radius: inherit;
   }
-  .weekly-schedule:not(.zoomed) .day-header:hover::after,
-  .weekly-schedule:not(.zoomed) .day-header:focus-visible::after,
-  .weekly-schedule.zoomed .day-header:not(.selected):hover::after,
-  .weekly-schedule.zoomed .day-header:not(.selected):focus-visible::after {
-    opacity: 1;
-  }
-
-  /* Selected zoomed day header shows unzoom icon */
-  .weekly-schedule.zoomed .day-header.selected::after {
-    content: "↺";
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1em;
+  .weekly-schedule.zoomed .day-header.selected .day-header-icon {
     background: rgba($color-primary, 1);
-    color: #fff;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s ease;
-    border-radius: inherit;
   }
-  .weekly-schedule.zoomed .day-header.selected:hover::after,
-  .weekly-schedule.zoomed .day-header.selected:focus-visible::after {
+  /* Show overlay on hover/focus */
+  .weekly-schedule:not(.zoomed) .day-header:hover .day-header-icon,
+  .weekly-schedule:not(.zoomed) .day-header:focus-visible .day-header-icon,
+  .weekly-schedule.zoomed .day-header:not(.selected):hover .day-header-icon,
+  .weekly-schedule.zoomed .day-header:not(.selected):focus-visible .day-header-icon,
+  .weekly-schedule.zoomed .day-header.selected:hover .day-header-icon,
+  .weekly-schedule.zoomed .day-header.selected:focus-visible .day-header-icon {
+    display: flex;
     opacity: 1;
   }
 
@@ -299,39 +350,54 @@
  }
 
  // Normal mode: fluid sizing
- .weekly-schedule.horizontal .events-grid {
-   grid-template-columns: repeat(var(--num-columns, 8), 1fr);
- }
 
- // Zoomed horizontal: fixed column width per hour
- .weekly-schedule.zoomed.horizontal .events-grid {
-   grid-template-columns: repeat(var(--num-columns, 8), var(--hour-col-width, 160px));
-   width: max-content;
+/* Horizontal: left fixed column for intersection + day headers; right scroll contains time axis + events */
+.weekly-schedule.horizontal {
+  display: grid;
+  grid-template-columns: var(--cross-axis-width) 1fr;
+  grid-template-rows: 1fr;
+  height: 100%;
+  min-height: 0;
+}
+.weekly-schedule.horizontal .schedule-left {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  grid-template-rows: var(--header-height) 1fr;
+  height: 100%;
+  min-height: 0;
+}
+.weekly-schedule.horizontal .schedule-left .schedule-intersection {
+  border-right: 1px solid var(--schedule-grid-line-color, $color-border);
+  border-bottom: 1px solid var(--schedule-grid-line-color, $color-border);
+}
+.weekly-schedule.horizontal .schedule-left .axis-vertical {
+  border-right: 1px solid var(--schedule-grid-line-color, $color-border);
+  grid-row: 2;
+  height: 100%;
+}
+.weekly-schedule.horizontal .schedule-scroll {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-rows: var(--header-height) 1fr;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 100%;
+  min-height: 0;
+}
+ .weekly-schedule.horizontal .schedule-scroll .axis-horizontal {
+   grid-row: 1;
+   grid-column: 1;
+  height: var(--header-height);
+  min-height: 0;
  }
-
- .weekly-schedule.zoomed.vertical .events-grid {
-   grid-template-rows: repeat(var(--num-rows, 8), var(--slot-row-height, 48px));
-   height: max-content;
- }
-
- /* GRID LINES - NORMAL MODE */
- /* Horizontal orientation vertical lines */
- .weekly-schedule.horizontal .axis-horizontal,
- .weekly-schedule.horizontal .events-grid {
+ .weekly-schedule.horizontal .schedule-scroll .events-grid {
    position: relative;
- }
- .weekly-schedule.horizontal .axis-horizontal::before,
- .weekly-schedule.horizontal .events-grid::before {
-   @include grid-line-pseudo;
-   background-repeat: no-repeat;
-   background-size: 100% 100%;
-   background-image: repeating-linear-gradient(
-     to right,
-     transparent 0,
-     transparent calc((100% / var(--num-columns)) - var(--line-thickness, 1px)),
-     var(--schedule-grid-line-color, $color-border) calc((100% / var(--num-columns)) - var(--line-thickness, 1px)),
-     var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-columns))
-   );
+   grid-row: 2;
+   grid-column: 1;
+  height: 100%;
+  min-height: 0;
  }
 
  /* Horizontal orientation: add horizontal day separator lines (not in zoomed mode since only one day visible) */
@@ -348,43 +414,63 @@
    );
  }
  /* Vertical orientation horizontal lines */
- .weekly-schedule.vertical .axis-vertical,
- .weekly-schedule.vertical .events-grid { position: relative; }
- .weekly-schedule.vertical .axis-vertical::before,
- .weekly-schedule.vertical .events-grid::before {
-   @include grid-line-pseudo;
-   background-repeat: no-repeat;
-   background-size: 100% 100%;
-   background-image: repeating-linear-gradient(
-     to bottom,
-     transparent 0,
-     transparent calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
-     var(--schedule-grid-line-color, $color-border) calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
-     var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-rows))
-   );
- }
+  .weekly-schedule.vertical .axis-vertical,
+  .weekly-schedule.vertical .events-grid { position: relative; }
+  .weekly-schedule.vertical .axis-vertical,
+  .weekly-schedule.vertical .events-grid { position: relative; }
+  /* Horizontal slot lines */
+  .weekly-schedule.vertical .axis-vertical::before,
+  .weekly-schedule.vertical .events-grid::before {
+    @include grid-line-pseudo;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
+      var(--schedule-grid-line-color, $color-border) calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
+      var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-rows))
+    );
+  }
+  /* Ensure events-grid is a positioning context in vertical mode */
+  .weekly-schedule.vertical .events-grid { position: relative; }
+
+  /* Vertical day separators only on events grid for precise alignment */
+  .weekly-schedule.vertical .events-grid::after {
+    @include grid-line-pseudo;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc((100% / var(--num-columns)) - var(--line-thickness, 1px)),
+      var(--schedule-grid-line-color, $color-border) calc((100% / var(--num-columns)) - var(--line-thickness, 1px)),
+      var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-columns))
+    );
+  }
 
  /* GRID LINES - ZOOMED MODE (FIXED SIZES) */
- .weekly-schedule.zoomed.horizontal .axis-horizontal::before,
- .weekly-schedule.zoomed.horizontal .events-grid::before {
-   background-image: repeating-linear-gradient(
-     to right,
-     transparent 0,
-     transparent calc(var(--hour-col-width, 160px) - var(--line-thickness, 1px)),
-     var(--schedule-grid-line-color, $color-border) calc(var(--hour-col-width, 160px) - var(--line-thickness, 1px)),
-     var(--schedule-grid-line-color, $color-border) var(--hour-col-width, 160px)
-   );
- }
- .weekly-schedule.zoomed.vertical .axis-vertical::before,
- .weekly-schedule.zoomed.vertical .events-grid::before {
-   background-image: repeating-linear-gradient(
-     to bottom,
-     transparent 0,
-     transparent calc(var(--slot-row-height, 48px) - var(--line-thickness, 1px)),
-     var(--schedule-grid-line-color, $color-border) calc(var(--slot-row-height, 48px) - var(--line-thickness, 1px)),
-     var(--schedule-grid-line-color, $color-border) var(--slot-row-height, 48px)
-   );
- }
+  .weekly-schedule.zoomed.horizontal .axis-horizontal::before,
+  .weekly-schedule.zoomed.horizontal .events-grid::before {
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(var(--hour-col-width, 160px) - var(--line-thickness, 1px)),
+      var(--schedule-grid-line-color, $color-border) calc(var(--hour-col-width, 160px) - var(--line-thickness, 1px)),
+      var(--schedule-grid-line-color, $color-border) var(--hour-col-width, 160px)
+    );
+  }
+  .weekly-schedule.zoomed.vertical .axis-vertical::before,
+  .weekly-schedule.zoomed.vertical .events-grid::before {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
+      var(--schedule-grid-line-color, $color-border) calc((100% / var(--num-rows)) - var(--line-thickness, 1px)),
+      var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-rows))
+    );
+  }
+
 
 
 
