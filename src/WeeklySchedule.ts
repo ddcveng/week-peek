@@ -14,7 +14,6 @@ import { createTimeLabelHTML, generateTimeSlots } from './templates/timeAxisTemp
 import { createDayHeaderHTML } from './templates/dayColumnTemplate';
 import { createEventHTML, createEventHTMLHorizontal } from './templates/eventTemplate';
 import './styles/main.scss';
-import { computePosition, offset, flip, shift } from '@floating-ui/dom';
 
 /**
  * Weekly Schedule Component
@@ -139,12 +138,10 @@ export class WeeklySchedule {
       styleString += ' --slot-row-height: 64px;';
     }
 
-    // The main container now has a wrapper for the view and a separate element for the popover
     const html = `
       <div class="weekly-schedule ${orientationClass} ${zoomClass} ${mobileClass} ${this.config.className!}" style="${styleString}">
         ${isMobile ? this.renderMobileView() : this.renderClassicView()}
       </div>
-      <div class="schedule-popover" style="display: none;"></div>
     `;
 
     this.container.innerHTML = html;
@@ -175,16 +172,12 @@ export class WeeklySchedule {
   }
 
   private renderClassicView(): string {
-    // Filter events by visible days and time range
     const startTime = new TimeOnly(this.config.startHour!, 0);
-    
     const visibleEvents = this.events.filter(event => {
-      // Filter by visible days
       if (!this.config.visibleDays!.includes(event.day)) {
         return false;
       }
       
-      // Filter by time range - event must start within the visible time range
       return !event.startTime.isBefore(startTime);
     });
     
@@ -394,7 +387,6 @@ export class WeeklySchedule {
       laneInfo
     );
 
-    // Use different rendering method based on orientation
     const eventHTML = this.config.orientation === ScheduleOrientation.Horizontal
       ? createEventHTMLHorizontal(event, laneInfo)
       : createEventHTML(event, laneInfo);
@@ -438,18 +430,14 @@ export class WeeklySchedule {
 
   private attachEventListeners(): void {
     this.container.addEventListener('click', (e: Event) => {
-       const target = e.target as HTMLElement;
+      const target = e.target as HTMLElement;
  
-       // Intersection reset button
-       const resetBtn = target.closest('.zoom-reset-btn');
-       if (resetBtn) {
-         this.resetZoom();
-         return;
-       }
+      const resetBtn = target.closest('.zoom-reset-btn');
+      if (resetBtn) {
+        this.resetZoom();
+        return;
+      }
 
-       // Popover close removed; tooltip is hover-only now
-
-      // Day header click to toggle zoom
       const dayHeader = target.closest('.day-header');
       if (dayHeader) {
         const dayAttr = (dayHeader as HTMLElement).getAttribute('data-day');
@@ -496,7 +484,6 @@ export class WeeklySchedule {
             // Do not return here, allow other handlers to process
          }
 
-         // Mobile event click: no popover, just emit click like normal
          const mobileEventEl = target.closest('.mobile-event');
          if (mobileEventEl) {
            const eventId = mobileEventEl.getAttribute('data-event-id');
@@ -512,23 +499,56 @@ export class WeeklySchedule {
          }
     });
 
-    // Desktop hover tooltip on regular event elements
     this.container.addEventListener('mouseover', (e: Event) => {
+      const scheduleRoot = this.container.querySelector('.weekly-schedule');
+      if (scheduleRoot?.classList.contains('mobile')) {
+        return;
+      }
+
       const target = e.target as HTMLElement;
-      const eventEl = target.closest('.event');
-      if (!eventEl || eventEl.classList.contains('event-overflow-indicator')) return;
+      const eventEl = target.closest('.event') as HTMLElement | null;
+      if (!eventEl || eventEl.classList.contains('event-overflow-indicator')) {
+        return;
+      }
+
       const eventId = eventEl.getAttribute('data-event-id');
       const scheduleEvent = this.allEvents.find(ev => ev.id === eventId);
-      if (!scheduleEvent) return;
-      const content = this.config.getEventTooltip ? this.config.getEventTooltip(scheduleEvent) : `<strong>${scheduleEvent.title}</strong>`;
-      this.showTooltip(eventEl as HTMLElement, content);
+      if (!scheduleEvent) {
+        return;
+      }
+
+      const hoverEvent = new CustomEvent('schedule-event-hover', {
+        detail: { event: scheduleEvent, element: eventEl },
+        bubbles: true,
+        cancelable: true
+      });
+      this.container.dispatchEvent(hoverEvent);
     });
 
     this.container.addEventListener('mouseout', (e: Event) => {
+      const scheduleRoot = this.container.querySelector('.weekly-schedule');
+      if (scheduleRoot?.classList.contains('mobile')) {
+        return;
+      }
+
       const target = e.target as HTMLElement;
-      const eventEl = target.closest('.event');
-      if (!eventEl) return;
-      this.hideTooltip();
+      const eventEl = target.closest('.event') as HTMLElement | null;
+      if (!eventEl || eventEl.classList.contains('event-overflow-indicator')) {
+        return;  
+      }
+
+      const eventId = eventEl.getAttribute('data-event-id');
+      const scheduleEvent = this.allEvents.find(ev => ev.id === eventId);
+      if (!scheduleEvent) {
+        return;
+      }
+
+      const hoverEndEvent = new CustomEvent('schedule-event-hover-end', {
+        detail: { event: scheduleEvent, element: eventEl },
+        bubbles: true,
+        cancelable: true
+      });
+      this.container.dispatchEvent(hoverEndEvent);
     });
   }
 
@@ -553,32 +573,7 @@ export class WeeklySchedule {
     }
   }
 
-  private showTooltip(anchorEl: HTMLElement, contentHtml: string): void {
-    const popover = this.container.querySelector<HTMLElement>('.schedule-popover');
-    if (!popover) return;
-    popover.innerHTML = `
-      <div class="popover-content">
-        ${contentHtml}
-      </div>
-    `;
-    popover.style.position = 'absolute';
-    popover.style.display = 'flex';
-    // Use Floating UI for robust positioning relative to anchor
-    computePosition(anchorEl, popover, {
-      placement: 'top',
-      middleware: [offset(8), flip(), shift({ padding: 8 })]
-    }).then(({ x, y }) => {
-      popover.style.left = `${Math.round(x)}px`;
-      popover.style.top = `${Math.round(y)}px`;
-    });
-  }
-
-  private hideTooltip(): void {
-    const popover = this.container.querySelector<HTMLElement>('.schedule-popover');
-    if (popover) {
-      popover.style.display = 'none';
-    }
-  }
+  // Tooltip rendering removed; external consumers handle hover via custom events.
 
   /**
    * Get current events array (copy)
