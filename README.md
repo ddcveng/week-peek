@@ -2,64 +2,75 @@
 
 Simple weekly schedule component with zoomable days and minimal dependencies.
 
-## Quick Start
+## Features
 
-1) Install and run the dev server
+- Zero dependencies: vanilla TypeScript + Sass; built with Vite
+- Mobile-first responsive design: adapts cleanly from phone to desktop
+- Zoomable days: click a day header to focus that day
+- Event driven design: emits js events on event click and event hover
 
-```pwsh
-npm install
-npm run dev
-```
+## Usage (ES Modules)
 
-2) Open the local URL printed by Vite and resize to see mobile/desktop.
+```html
+<link rel="stylesheet" href="/week-peek/style.css">
+<div id="app"></div>
+<script type="module">
+  import { WeeklySchedule, DayOfWeek } from '/week-peek/week-peek.es.js';
 
-## Usage (Embed)
+  const container = document.getElementById('app');
+  const config = {
+    visibleDays: [
+      DayOfWeek.Monday,
+      DayOfWeek.Tuesday,
+      DayOfWeek.Wednesday,
+      DayOfWeek.Thursday,
+      DayOfWeek.Friday
+    ],
+    startHour: 9,
+    endHour: 17
+  };
+  const events = [
+    { id: 'evt-1', day: DayOfWeek.Monday, title: 'Standup', startTime: { hours: 9, minutes: 0 }, endTime: { hours: 9, minutes: 30 } },
+  ];
 
-```ts
-import { WeeklySchedule } from './src/WeeklySchedule';
-import { DayOfWeek, TimeOnly } from './src/types';
+  const result = WeeklySchedule.create(container, config, events);
+  if (!result.success) console.error(result.error);
 
-const container = document.getElementById('app')!;
-const schedule = WeeklySchedule.create(container, {
-  visibleDays: [
-    DayOfWeek.Monday,
-    DayOfWeek.Tuesday,
-    DayOfWeek.Wednesday,
-    DayOfWeek.Thursday,
-    DayOfWeek.Friday,
-  ],
-  startHour: 9,
-  endHour: 17,
-}, [
-  {
-    id: 'evt-1',
-    day: DayOfWeek.Monday,
-    title: 'Standup',
-    startTime: new TimeOnly(9, 0),
-    endTime: new TimeOnly(9, 30),
-  },
-]);
+  // --- Event listeners ---
+  // Click events: detail = { event }
+  container.addEventListener('schedule-event-click', (e) => {
+    const { event } = (e).detail;
+    console.log('Clicked:', event.id, event.title);
+  });
 
-if (!schedule.success) {
-  console.error(schedule.error);
-}
+  // Hover start: detail = { event, element }
+  container.addEventListener('schedule-event-hover', (e) => {
+    const { event, element } = (e).detail;
+    element.style.outline = '2px solid #3b82f6'; // simple highlight
+    console.log('Hover start:', event.id);
+  });
+
+  // Hover end: detail = { event, element }
+  container.addEventListener('schedule-event-hover-end', (e) => {
+    const { event, element } = (e).detail;
+    element.style.outline = '';
+    console.log('Hover end:', event.id);
+  });
+</script>
 ```
 
 Ensure your container controls sizing. The component fills its container (width/height via CSS), and switches to mobile layout below the breakpoint.
 
-## Features
-
-- Minimal dependencies: vanilla TypeScript + Sass (plus Floating UI for tooltips); built with Vite
-- Mobile-first responsive design: adapts cleanly from phone to desktop
-- Zoomable days: click a day header to focus that day
-
-## Build
+### Production Build
 
 ```pwsh
 npm run build
 ```
 
-Outputs a production build via Vite.
+Outputs:
+- `dist/week-peek.iife.min.js` (global `WeekPeek`)
+- `dist/week-peek.es.js` (ES module)
+- `dist/style.css`
 
 ## License
 

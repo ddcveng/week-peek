@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types",
+    "noEmit": false
+  },
+  "include": ["src/index.ts", "src/types/**/*.ts", "src/WeeklySchedule.ts", "src/utils/**/*.ts", "src/templates/**/*.ts"]
+}

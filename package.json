@@ -5,15 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc --noEmit && vite build && tsc -p tsconfig.build.json",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/node": "^20.11.30",
     "sass": "^1.94.2",
     "typescript": "~5.6.2",
     "vite": "^5.4.11"
   },
-  "dependencies": {
-    "@floating-ui/dom": "^1.7.4"
-  }
+  "dependencies": {}
 }
