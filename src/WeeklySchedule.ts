@@ -121,8 +121,6 @@ export class WeeklySchedule {
    */
   render(): void {
     const isMobile = this.container.offsetWidth < 768; // Breakpoint for mobile view
-    console.log(`Rendering schedule (mobile: ${isMobile}, offsetWidth: ${this.container.offsetWidth})`);
-
     const orientationClass = this.config.orientation === ScheduleOrientation.Horizontal ? 'horizontal' : 'vertical';
     const zoomClass = this.zoomedDay !== null ? 'zoomed' : '';
     const mobileClass = isMobile ? 'mobile' : '';
@@ -689,8 +687,6 @@ export class WeeklySchedule {
    * @returns Result indicating success or failure
    */
     updateConfig(newConfig: Partial<ScheduleConfig>): Result<void, Error> {
-
- 
      const mergedConfig: ScheduleConfig = {
        ...this.config,
        ...newConfig

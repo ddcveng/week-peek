@@ -1,0 +1,98 @@
+:root {
+  --demo-bg: #0f1115;
+  --demo-surface: #1b1f24;
+  --demo-border: #2a3139;
+  --demo-text: #eef2f6;
+  --demo-accent: #4dabf7;
+  --demo-radius: 6px;
+  --demo-transition: 120ms ease;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, Arial, sans-serif;
+  background: var(--demo-bg);
+  color: var(--demo-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.demo-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--demo-surface);
+  border-bottom: 1px solid var(--demo-border);
+}
+
+.demo-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.demo-controls button {
+  background: var(--demo-bg);
+  border: 1px solid var(--demo-border);
+  color: var(--demo-text);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  border-radius: var(--demo-radius);
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: var(--demo-transition);
+}
+
+.demo-controls button[aria-pressed="true"],
+.demo-controls button:hover {
+  background: var(--demo-accent);
+  border-color: var(--demo-accent);
+  color: #0b0e11;
+}
+
+.demo-main {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.schedule-host {
+  width: 100%;
+  height: 640px;
+  background: var(--demo-surface);
+  border: 1px solid var(--demo-border);
+  border-radius: var(--demo-radius);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Tooltip */
+.tooltip-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.demo-tooltip {
+  position: absolute;
+  background: #ffffff;
+  color: #0d1117;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 6px 8px;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px -5px rgba(0,0,0,0.35);
+  border: 1px solid #d0d7de;
+  max-width: 220px;
+  z-index: 10;
+}
+
+.demo-tooltip strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 768px) {
+  .schedule-host { height: auto; }
+}
