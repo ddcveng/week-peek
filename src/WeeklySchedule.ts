@@ -24,10 +24,10 @@ export class WeeklySchedule {
   private config: ScheduleConfig;
   private events: ScheduleEvent[];
   private allEvents: ScheduleEvent[];
-   private originalVisibleDays: DayOfWeek[];
-   private zoomedDay: DayOfWeek | null = null;
-   private pendingScrollTargetId: string | null = null;
-   private resizeObserver: ResizeObserver;
+  private originalVisibleDays: DayOfWeek[];
+  private zoomedDay: DayOfWeek | null = null;
+  private pendingScrollTargetId: string | null = null;
+  private resizeObserver: ResizeObserver;
 
   /**
    * Factory method to create a WeeklySchedule instance with validation
@@ -96,22 +96,22 @@ export class WeeklySchedule {
       startHour: config.startHour ?? 9,
       endHour: config.endHour ?? 17,
       timeSlotInterval: config.timeSlotInterval ?? TimeSlotInterval.SixtyMinutes,
-      showDayHeaders: config.showDayHeaders ?? true,
+
       className: config.className || '',
       dayNameTranslations: config.dayNameTranslations,
-      theme: config.theme || undefined,
+
       orientation: config.orientation ?? ScheduleOrientation.Vertical,
       icons: config.icons,
-      getEventTooltip: config.getEventTooltip
+
     } as ScheduleConfig;
 
     this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
 
     this.attachEventListeners();
-    
+
     this.resizeObserver = new ResizeObserver(() => this.render());
     this.resizeObserver.observe(this.container);
-    
+
     // Initial render
     this.render();
   }
@@ -175,10 +175,10 @@ export class WeeklySchedule {
       if (!this.config.visibleDays!.includes(event.day)) {
         return false;
       }
-      
+
       return !event.startTime.isBefore(startTime);
     });
-    
+
     const axisConfiguration = this.getAxisConfiguration();
     const headerAxis = this.createAxis(ScheduleOrientation.Horizontal, axisConfiguration.headerAxisData);
     const crossAxis = this.createAxis(ScheduleOrientation.Vertical, axisConfiguration.crossAxisData);
@@ -218,10 +218,10 @@ export class WeeklySchedule {
   private renderMobileView(): string {
     const eventsByDay = groupEventsByDay(this.events);
     let dayBlocksHtml = '';
-  
+
     for (const day of this.config.visibleDays!) {
       const dayEvents = (eventsByDay.get(day) || []).sort((a, b) => a.startTime.toMinutes() - b.startTime.toMinutes());
-      
+
       dayBlocksHtml += `
         <div class="mobile-day-block">
           <div class="mobile-day-header">${getDayName(day, this.config.dayNameTranslations)}</div>
@@ -239,29 +239,29 @@ export class WeeklySchedule {
         </div>
       `;
     }
-  
+
     return dayBlocksHtml;
   }
 
-    private renderIntersection(): string {
-      return ""; // disable intersection area for now
-      // if (this.zoomedDay === null) {
-      //   const iconClass = this.config.icons?.className ? this.config.icons.className : '';
-      //   const ctaIcon = this.config.icons?.cta ?? '🔍';
-      //   return `<div class="zoom-hint" aria-live="polite"><span class="zoom-hint-icon ${iconClass}" aria-hidden="true">${ctaIcon}</span></div>`;
-      // }
-      // return `<button class="zoom-reset-btn" aria-label="Back to week">Back to week</button>`;
-    }
+  private renderIntersection(): string {
+    return ""; // disable intersection area for now
+    // if (this.zoomedDay === null) {
+    //   const iconClass = this.config.icons?.className ? this.config.icons.className : '';
+    //   const ctaIcon = this.config.icons?.cta ?? '🔍';
+    //   return `<div class="zoom-hint" aria-live="polite"><span class="zoom-hint-icon ${iconClass}" aria-hidden="true">${ctaIcon}</span></div>`;
+    // }
+    // return `<button class="zoom-reset-btn" aria-label="Back to week">Back to week</button>`;
+  }
 
   private getAxisConfiguration(): AxisConfiguration {
 
     const isHorizontal = this.config.orientation === ScheduleOrientation.Horizontal;
     const timeSlots = generateTimeSlots(this.config.startHour!, this.config.endHour!, this.config.timeSlotInterval!);
-    
+
     const daysForHeader = this.originalVisibleDays || this.config.visibleDays!;
     const daysHtml = daysForHeader.map(day => createDayHeaderHTML(day, this.config.dayNameTranslations, this.zoomedDay, this.config.icons as IconConfig)).join('');
     const timeSlotsHtml = timeSlots.map(time => createTimeLabelHTML(time)).join('');
-  
+
     if (isHorizontal) {
       return {
         headerHeight: '40px',
@@ -284,10 +284,10 @@ export class WeeklySchedule {
   }
 
   private createAxis(axisDirection: ScheduleOrientation, axisContent: string): string {
-    const axisClass = axisDirection === ScheduleOrientation.Horizontal 
-      ? 'axis-horizontal' 
+    const axisClass = axisDirection === ScheduleOrientation.Horizontal
+      ? 'axis-horizontal'
       : 'axis-vertical';
-    
+
     return `<div class="${axisClass}">${axisContent}</div>`;
   }
 
@@ -296,78 +296,78 @@ export class WeeklySchedule {
    * @private
    */
   private createEventsGrid(events: ScheduleEvent[]): string {
-     const OVERLAP_HIDE_THRESHOLD = 3;
-     const OVERLAP_VISIBLE_COUNT = 2; 
+    const OVERLAP_HIDE_THRESHOLD = 3;
+    const OVERLAP_VISIBLE_COUNT = 2;
 
-     const eventsByDay = groupEventsByDay(events);
-     const laneMaps = new Map<DayOfWeek, Map<string, LaneInfo>>();
-     let eventsHtml = '';
+    const eventsByDay = groupEventsByDay(events);
+    const laneMaps = new Map<DayOfWeek, Map<string, LaneInfo>>();
+    let eventsHtml = '';
 
-     // If zoomed, render all events without compression
-     if (this.zoomedDay !== null) {
-       for (const [day, dayEvents] of eventsByDay.entries()) {
-         laneMaps.set(day, assignLanes(dayEvents));
-       }
-       events.forEach(event => {
-         const laneInfo = laneMaps.get(event.day)?.get(event.id);
-         eventsHtml += this.createPositionedEvent(event, laneInfo);
-       });
-       return `<div class="events-grid">${eventsHtml}</div>`;
-     }
+    // If zoomed, render all events without compression
+    if (this.zoomedDay !== null) {
+      for (const [day, dayEvents] of eventsByDay.entries()) {
+        laneMaps.set(day, assignLanes(dayEvents));
+      }
+      events.forEach(event => {
+        const laneInfo = laneMaps.get(event.day)?.get(event.id);
+        eventsHtml += this.createPositionedEvent(event, laneInfo);
+      });
+      return `<div class="events-grid">${eventsHtml}</div>`;
+    }
 
-     // Normal mode: compress conflict groups per day
-     const compressedEvents: ScheduleEvent[] = [];
-     for (const [day, dayEvents] of eventsByDay.entries()) {
-       // Sort by start for stable selection
-       const sorted = [...dayEvents].sort((a, b) => a.startTime.toMinutes() - b.startTime.toMinutes());
+    // Normal mode: compress conflict groups per day
+    const compressedEvents: ScheduleEvent[] = [];
+    for (const [day, dayEvents] of eventsByDay.entries()) {
+      // Sort by start for stable selection
+      const sorted = [...dayEvents].sort((a, b) => a.startTime.toMinutes() - b.startTime.toMinutes());
 
-       // Build conflict groups (transitive overlap)
-       const conflictGroups: ScheduleEvent[][] = [];
-       for (const ev of sorted) {
-         let placed = false;
-         for (const group of conflictGroups) {
-           if (group.some(g => g.day === ev.day && !(g.endTime.toMinutes() <= ev.startTime.toMinutes() || g.startTime.toMinutes() >= ev.endTime.toMinutes()))) {
-             group.push(ev);
-             placed = true;
-             break;
-           }
-         }
-         if (!placed) conflictGroups.push([ev]);
-       }
+      // Build conflict groups (transitive overlap)
+      const conflictGroups: ScheduleEvent[][] = [];
+      for (const ev of sorted) {
+        let placed = false;
+        for (const group of conflictGroups) {
+          if (group.some(g => g.day === ev.day && !(g.endTime.toMinutes() <= ev.startTime.toMinutes() || g.startTime.toMinutes() >= ev.endTime.toMinutes()))) {
+            group.push(ev);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) conflictGroups.push([ev]);
+      }
 
-       for (const group of conflictGroups) {
-         const groupSize = group.length;
-         if (groupSize > OVERLAP_HIDE_THRESHOLD) {
-           const visible = group.slice(0, OVERLAP_VISIBLE_COUNT);
-           const hiddenCount = groupSize - OVERLAP_VISIBLE_COUNT;
-           const earliest = group.reduce((min, e) => (e.startTime.toMinutes() < min.startTime.toMinutes() ? e : min), group[0]);
-           const latest = group.reduce((max, e) => (e.endTime.toMinutes() > max.endTime.toMinutes() ? e : max), group[0]);
-           const overflowEvent: ScheduleEvent = {
-             id: `overflow-${day}-${earliest.id}`,
-             day,
-             startTime: earliest.startTime,
-             endTime: latest.endTime,
-             title: `+${hiddenCount} more`,
-             description: undefined,
-             className: 'event-overflow-indicator'
-           };
-           compressedEvents.push(...visible, overflowEvent);
-         } else {
-           compressedEvents.push(...group);
-         }
-       }
+      for (const group of conflictGroups) {
+        const groupSize = group.length;
+        if (groupSize > OVERLAP_HIDE_THRESHOLD) {
+          const visible = group.slice(0, OVERLAP_VISIBLE_COUNT);
+          const hiddenCount = groupSize - OVERLAP_VISIBLE_COUNT;
+          const earliest = group.reduce((min, e) => (e.startTime.toMinutes() < min.startTime.toMinutes() ? e : min), group[0]);
+          const latest = group.reduce((max, e) => (e.endTime.toMinutes() > max.endTime.toMinutes() ? e : max), group[0]);
+          const overflowEvent: ScheduleEvent = {
+            id: `overflow-${day}-${earliest.id}`,
+            day,
+            startTime: earliest.startTime,
+            endTime: latest.endTime,
+            title: `+${hiddenCount} more`,
+            description: undefined,
+            className: 'event-overflow-indicator'
+          };
+          compressedEvents.push(...visible, overflowEvent);
+        } else {
+          compressedEvents.push(...group);
+        }
+      }
 
-       const compressedDayEvents = compressedEvents.filter(e => e.day === day);
-       laneMaps.set(day, assignLanes(compressedDayEvents));
-     }
+      const compressedDayEvents = compressedEvents.filter(e => e.day === day);
+      laneMaps.set(day, assignLanes(compressedDayEvents));
+    }
 
-     compressedEvents.forEach(event => {
-       const laneInfo = laneMaps.get(event.day)?.get(event.id);
-       eventsHtml += this.createPositionedEvent(event, laneInfo);
-     });
+    compressedEvents.forEach(event => {
+      const laneInfo = laneMaps.get(event.day)?.get(event.id);
+      eventsHtml += this.createPositionedEvent(event, laneInfo);
+    });
 
-     return `<div class="events-grid">${eventsHtml}</div>`;
-   }
+    return `<div class="events-grid">${eventsHtml}</div>`;
+  }
 
   /**
    * Create positioned event HTML with grid styling (relative to events grid)
@@ -389,10 +389,10 @@ export class WeeklySchedule {
     const eventHTML = this.config.orientation === ScheduleOrientation.Horizontal
       ? createEventHTMLHorizontal(event, laneInfo)
       : createEventHTML(event, laneInfo);
-    
+
     // Base grid positioning (integer cell positions)
     const gridStyle = `grid-row: ${layout.gridRowStart} / ${layout.gridRowEnd}; grid-column: ${layout.gridColumnStart} / ${layout.gridColumnEnd};`;
-    
+
     // Add absolute positioning for fractional offsets
     // Positioning values are calculated in calculateEventPosition based on orientation
     // Both time-based positioning and lane-based positioning are always applied
@@ -409,9 +409,9 @@ export class WeeklySchedule {
     if (layout.heightPercent !== undefined) {
       positioningStyle += ` height: ${layout.heightPercent}%;`;
     }
-    
+
     const fullStyle = `${gridStyle} ${positioningStyle}`;
-    
+
     if (eventHTML.includes('style="')) {
       return eventHTML.replace(
         'style="',
@@ -430,7 +430,7 @@ export class WeeklySchedule {
   private attachEventListeners(): void {
     this.container.addEventListener('click', (e: Event) => {
       const target = e.target as HTMLElement;
- 
+
       const resetBtn = target.closest('.zoom-reset-btn');
       if (resetBtn) {
         this.resetZoom();
@@ -451,51 +451,51 @@ export class WeeklySchedule {
         return;
       }
 
-       // Event click dispatch or overflow zoom
-       const eventEl = target.closest('.event');
-       if (eventEl) {
-            // Overflow indicator: zoom to that day and scroll to the cluster's first event
-            if (eventEl.classList.contains('event-overflow-indicator')) {
-              const id = eventEl.getAttribute('data-event-id') || '';
-              const parts = id.split('-');
-              const dayNum = Number(parts[1]);
-              const earliestId = parts.slice(2).join('-');
-              if (!isNaN(dayNum)) {
-                // Set pending scroll to the earliest event in the cluster after zoom
-                this.pendingScrollTargetId = earliestId || null;
-                this.zoomToDay(dayNum as DayOfWeek);
-              }
-              return;
-            }
-    
-            const eventId = eventEl.getAttribute('data-event-id');
-            const scheduleEvent = this.events.find(ev => ev.id === eventId);
-            if (!scheduleEvent) {
-              return;
-            }
-    
-            const customEvent = new CustomEvent('schedule-event-click', {
-              detail: { event: scheduleEvent },
-              bubbles: true,
-              cancelable: true
-            });
-            this.container.dispatchEvent(customEvent);
-            // Do not return here, allow other handlers to process
-         }
+      // Event click dispatch or overflow zoom
+      const eventEl = target.closest('.event');
+      if (eventEl) {
+        // Overflow indicator: zoom to that day and scroll to the cluster's first event
+        if (eventEl.classList.contains('event-overflow-indicator')) {
+          const id = eventEl.getAttribute('data-event-id') || '';
+          const parts = id.split('-');
+          const dayNum = Number(parts[1]);
+          const earliestId = parts.slice(2).join('-');
+          if (!isNaN(dayNum)) {
+            // Set pending scroll to the earliest event in the cluster after zoom
+            this.pendingScrollTargetId = earliestId || null;
+            this.zoomToDay(dayNum as DayOfWeek);
+          }
+          return;
+        }
 
-         const mobileEventEl = target.closest('.mobile-event');
-         if (mobileEventEl) {
-           const eventId = mobileEventEl.getAttribute('data-event-id');
-           const scheduleEvent = this.allEvents.find(ev => ev.id === eventId);
-           if (!scheduleEvent) return;
-           const customEvent = new CustomEvent('schedule-event-click', {
-             detail: { event: scheduleEvent },
-             bubbles: true,
-             cancelable: true
-           });
-           this.container.dispatchEvent(customEvent);
-           return;
-         }
+        const eventId = eventEl.getAttribute('data-event-id');
+        const scheduleEvent = this.events.find(ev => ev.id === eventId);
+        if (!scheduleEvent) {
+          return;
+        }
+
+        const customEvent = new CustomEvent('schedule-event-click', {
+          detail: { event: scheduleEvent },
+          bubbles: true,
+          cancelable: true
+        });
+        this.container.dispatchEvent(customEvent);
+        // Do not return here, allow other handlers to process
+      }
+
+      const mobileEventEl = target.closest('.mobile-event');
+      if (mobileEventEl) {
+        const eventId = mobileEventEl.getAttribute('data-event-id');
+        const scheduleEvent = this.allEvents.find(ev => ev.id === eventId);
+        if (!scheduleEvent) return;
+        const customEvent = new CustomEvent('schedule-event-click', {
+          detail: { event: scheduleEvent },
+          bubbles: true,
+          cancelable: true
+        });
+        this.container.dispatchEvent(customEvent);
+        return;
+      }
     });
 
     this.container.addEventListener('mouseover', (e: Event) => {
@@ -533,7 +533,7 @@ export class WeeklySchedule {
       const target = e.target as HTMLElement;
       const eventEl = target.closest('.event') as HTMLElement | null;
       if (!eventEl || eventEl.classList.contains('event-overflow-indicator')) {
-        return;  
+        return;
       }
 
       const eventId = eventEl.getAttribute('data-event-id');
@@ -636,7 +636,7 @@ export class WeeklySchedule {
    */
   updateEvents(events: ScheduleEvent[]): Result<void, Error> {
     const errors: string[] = [];
-    
+
     events.forEach((event, index) => {
       const result = validateEvent(event);
       if (!result.success) {
@@ -645,40 +645,40 @@ export class WeeklySchedule {
         });
       }
     });
-    
+
     if (errors.length > 0) {
       return {
         success: false,
         error: new Error(`Invalid events: ${errors.join(', ')}`)
       };
     }
-    
+
     this.events = [...events];
     this.allEvents = [...events];
     this.render();
-    
+
     return {
       success: true,
       data: undefined
     };
   }
 
-    zoomToDay(day: DayOfWeek): void {
-      if (!this.originalVisibleDays) {
-        this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
-      }
-      this.zoomedDay = day;
-      // Keep full original time range; just restrict visible days
-      this.updateConfig({ visibleDays: [day] });
+  zoomToDay(day: DayOfWeek): void {
+    if (!this.originalVisibleDays) {
+      this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
     }
+    this.zoomedDay = day;
+    // Keep full original time range; just restrict visible days
+    this.updateConfig({ visibleDays: [day] });
+  }
 
 
 
-    resetZoom(): void {
-      if (this.zoomedDay === null) return;
-      this.zoomedDay = null;
-      this.updateConfig({ visibleDays: this.originalVisibleDays });
-    }
+  resetZoom(): void {
+    if (this.zoomedDay === null) return;
+    this.zoomedDay = null;
+    this.updateConfig({ visibleDays: this.originalVisibleDays });
+  }
 
 
 
@@ -687,11 +687,11 @@ export class WeeklySchedule {
    * @param newConfig - Partial configuration to merge
    * @returns Result indicating success or failure
    */
-    updateConfig(newConfig: Partial<ScheduleConfig>): Result<void, Error> {
-     const mergedConfig: ScheduleConfig = {
-       ...this.config,
-       ...newConfig
-     };
+  updateConfig(newConfig: Partial<ScheduleConfig>): Result<void, Error> {
+    const mergedConfig: ScheduleConfig = {
+      ...this.config,
+      ...newConfig
+    };
 
 
     const validation = validateConfig(mergedConfig);
@@ -708,16 +708,16 @@ export class WeeklySchedule {
       startHour: mergedConfig.startHour ?? this.config.startHour!,
       endHour: mergedConfig.endHour ?? this.config.endHour!,
       timeSlotInterval: mergedConfig.timeSlotInterval ?? this.config.timeSlotInterval!,
-      showDayHeaders: mergedConfig.showDayHeaders ?? this.config.showDayHeaders!,
+
       className: mergedConfig.className || this.config.className!,
       dayNameTranslations: mergedConfig.dayNameTranslations,
-      theme: mergedConfig.theme || undefined,
+
       orientation: mergedConfig.orientation ?? this.config.orientation!,
-      getEventTooltip: mergedConfig.getEventTooltip ?? this.config.getEventTooltip
+
     } as ScheduleConfig;
 
     this.render();
-    
+
     return {
       success: true,
       data: undefined

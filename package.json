@@ -1,18 +1,18 @@
 {
-  "name": "simple-calendar",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build && tsc -p tsconfig.build.json",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "@types/node": "^20.11.30",
-    "sass": "^1.94.2",
-    "typescript": "~5.6.2",
-    "vite": "^5.4.11"
-  },
-  "dependencies": {}
+    "name": "week-peek",
+    "private": true,
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build && dts-bundle-generator -o dist/week-peek.d.ts src/dts-entry.ts",
+        "preview": "vite preview"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.30",
+        "dts-bundle-generator": "^9.5.1",
+        "sass": "^1.94.2",
+        "typescript": "~5.6.2",
+        "vite": "^5.4.11"
+    }
 }

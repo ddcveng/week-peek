@@ -171,92 +171,41 @@ export function getDayName(
 export interface ScheduleEvent {
   id: string;
   day: DayOfWeek;
-  
+
   /**
    * Start time of the event
    */
   startTime: TimeOnly;
-  
+
   /**
    * End time of the event
    * Must be after startTime
    */
   endTime: TimeOnly;
-  
+
   title: string;
 
   description?: string;
-  
+
   /**
    * Optional background color for the event
    * Can be any valid CSS color value
    * Default: component theme primary color
    */
   color?: string;
-  
+
   /**
    * Optional CSS class name(s) to apply to event element
    */
   className?: string;
-  
+
   /**
    * Optional metadata for application use
    */
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Theme configuration for visual customization
- */
-export interface ScheduleTheme {
-  /**
-   * Primary color for events (if event.color not specified)
-   * Default: #3b82f6 (blue)
-   */
-  primaryColor?: string;
-  
-  /**
-   * Background color for schedule grid
-   * Default: #ffffff (white)
-   */
-  backgroundColor?: string;
-  
-  /**
-   * Color for grid lines
-   * Default: #e5e7eb (light gray)
-   */
-  gridLineColor?: string;
-  
-  /**
-   * Text color for day headers
-   * Default: #111827 (dark gray)
-   */
-  headerTextColor?: string;
-  
-  /**
-   * Text color for time labels
-   * Default: #6b7280 (medium gray)
-   */
-  timeTextColor?: string;
-  
-  /**
-   * Text color for event content
-   * Default: #ffffff (white)
-   */
-  eventTextColor?: string;
-  
-  /**
-   * Border radius for events
-   * Default: 4px
-   */
-  eventBorderRadius?: string;
-  
-  /**
-   * Font family for all text
-   * Default: system font stack
-   */
-  fontFamily?: string;
-}
+
 
 /**
  * Configuration options for the WeeklySchedule component
@@ -267,42 +216,31 @@ export interface ScheduleConfig {
    * Default: Monday-Friday (work week)
    */
   visibleDays?: DayOfWeek[];
-  
+
   /**
    * Start hour for the time axis (0-23)
    * Default: 9 (9:00 AM)
    */
   startHour?: Hour;
-  
+
   /**
    * End hour for the time axis (0-23)
    * Default: 17 (5:00 PM)
    * Must be greater than startHour
    */
   endHour?: Hour;
-  
+
   /**
    * Interval between time slots in minutes
    * Default: 60 (1 hour)
    */
   timeSlotInterval?: TimeSlotInterval;
-  
-  /**
-   * Whether to show day headers at the top
-   * Default: true
-   */
-  showDayHeaders?: boolean;
-  
+
   /**
    * CSS class name to apply to the root schedule element
    */
   className?: string;
-  
-  /**
-   * Theme configuration (optional)
-   */
-  theme?: ScheduleTheme;
-  
+
   /**
    * Day name translations for localization
    * Default: English day names
@@ -320,13 +258,6 @@ export interface ScheduleConfig {
    * Icon configuration (replaces previous separate iconClass + icons fields)
    */
   icons?: IconConfig;
-
-  /**
-   * Optional function to generate custom HTML content for the event tooltip/popover.
-   * @param event The event data.
-   * @returns An HTML string.
-   */
-  getEventTooltip?: (event: ScheduleEvent) => string;
 }
 
 /**
@@ -341,7 +272,7 @@ export interface LaneInfo {
    * 0-based lane index (0 = first lane, 1 = second lane, etc.)
    */
   laneIndex: number;
-  
+
   /**
    * Total number of lanes for this conflict group
    */
@@ -353,12 +284,12 @@ export interface LayoutEvent extends ScheduleEvent {
    * Grid row start index (1-based for CSS Grid)
    */
   gridRowStart: number;
-  
+
   /**
    * Grid row end index (1-based for CSS Grid)
    */
   gridRowEnd: number;
-  
+
   /**
    * Grid column index (1-based for CSS Grid)
    */
@@ -368,7 +299,7 @@ export interface LayoutEvent extends ScheduleEvent {
    * Grid column end index (1-based for CSS Grid)
    */
   gridColumnEnd: number;
-  
+
   /**
    * CSS positioning values for fractional offsets
    */
@@ -376,7 +307,7 @@ export interface LayoutEvent extends ScheduleEvent {
   topPercent?: number; // For vertical orientation
   widthPercent?: number; // For horizontal orientation
   heightPercent?: number; // For vertical orientation
-  
+
   /**
    * Optional lane assignment for overlapping events
    */

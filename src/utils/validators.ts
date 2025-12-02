@@ -24,16 +24,16 @@ export function isValidTimeOnly(value: unknown): value is TimeOnly {
  */
 export function validateEvent(event: unknown): Result<void, ValidationError[]> {
   const errors: ValidationError[] = [];
-  
+
   if (typeof event !== 'object' || event === null) {
     return {
       success: false,
       error: [{ field: 'event', message: 'Event must be an object' }]
     };
   }
-  
+
   const e = event as Partial<ScheduleEvent>;
-  
+
   // Validate id
   if (typeof e.id !== 'string' || e.id.length === 0) {
     errors.push({
@@ -42,7 +42,7 @@ export function validateEvent(event: unknown): Result<void, ValidationError[]> {
       value: e.id
     });
   }
-  
+
   // Validate day
   if (!isDayOfWeek(e.day)) {
     errors.push({
@@ -51,7 +51,7 @@ export function validateEvent(event: unknown): Result<void, ValidationError[]> {
       value: e.day
     });
   }
-  
+
   // Validate startTime
   if (!isValidTimeOnly(e.startTime)) {
     errors.push({
@@ -69,7 +69,7 @@ export function validateEvent(event: unknown): Result<void, ValidationError[]> {
       value: e.endTime
     });
   }
-  
+
   // Validate time order (only if both are valid)
   if (isValidTimeOnly(e.startTime) && isValidTimeOnly(e.endTime)) {
     if (!e.endTime.isAfter(e.startTime)) {
@@ -80,7 +80,7 @@ export function validateEvent(event: unknown): Result<void, ValidationError[]> {
       });
     }
   }
-  
+
   // Validate title
   if (typeof e.title !== 'string' || e.title.length === 0) {
     errors.push({
@@ -89,11 +89,11 @@ export function validateEvent(event: unknown): Result<void, ValidationError[]> {
       value: e.title
     });
   }
-  
+
   if (errors.length > 0) {
     return { success: false, error: errors };
   }
-  
+
   return { success: true, data: undefined };
 }
 
@@ -102,16 +102,16 @@ export function validateEvent(event: unknown): Result<void, ValidationError[]> {
  */
 export function validateConfig(config: unknown): Result<void, ValidationError[]> {
   const errors: ValidationError[] = [];
-  
+
   if (typeof config !== 'object' || config === null) {
     return {
       success: false,
       error: [{ field: 'config', message: 'Config must be an object' }]
     };
   }
-  
+
   const c = config as Partial<ScheduleConfig>;
-  
+
   // Validate visibleDays
   if (c.visibleDays !== undefined) {
     if (!Array.isArray(c.visibleDays) || c.visibleDays.length === 0) {
@@ -132,7 +132,7 @@ export function validateConfig(config: unknown): Result<void, ValidationError[]>
       });
     }
   }
-  
+
   // Validate hour range (runtime check for valid Hour values)
   if (c.startHour !== undefined) {
     if (typeof c.startHour !== 'number' || !Number.isInteger(c.startHour) || c.startHour < 0 || c.startHour > 23) {
@@ -143,7 +143,7 @@ export function validateConfig(config: unknown): Result<void, ValidationError[]>
       });
     }
   }
-  
+
   if (c.endHour !== undefined) {
     if (typeof c.endHour !== 'number' || !Number.isInteger(c.endHour) || c.endHour < 0 || c.endHour > 23) {
       errors.push({
@@ -153,7 +153,7 @@ export function validateConfig(config: unknown): Result<void, ValidationError[]>
       });
     }
   }
-  
+
   // Validate hour order
   if (c.startHour !== undefined && c.endHour !== undefined && c.endHour <= c.startHour) {
     errors.push({
@@ -162,7 +162,7 @@ export function validateConfig(config: unknown): Result<void, ValidationError[]>
       value: { startHour: c.startHour, endHour: c.endHour }
     });
   }
-  
+
   // Validate orientation
   if (c.orientation !== undefined) {
     if (c.orientation !== 'vertical' && c.orientation !== 'horizontal') {
@@ -174,21 +174,12 @@ export function validateConfig(config: unknown): Result<void, ValidationError[]>
     }
   }
 
-  // Validate getEventTooltip
-  if (c.getEventTooltip !== undefined) {
-    if (typeof c.getEventTooltip !== 'function') {
-      errors.push({
-        field: 'getEventTooltip',
-        message: 'getEventTooltip must be a function if provided',
-        value: c.getEventTooltip
-      });
-    }
-  }
-  
+
+
   if (errors.length > 0) {
     return { success: false, error: errors };
   }
-  
+
   return { success: true, data: undefined };
 }
 

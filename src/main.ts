@@ -33,17 +33,17 @@ const events: ScheduleEvent[] = [
   createEvent('1a', DayOfWeek.Monday, 10, 30, 11, 30, 'Client Call', '#ef4444', 'Overlaps with standup'),
   createEvent('2', DayOfWeek.Monday, 14, 0, 16, 0, 'Sprint Planning', '#8b5cf6', 'Plan next sprint'),
   createEvent('2a', DayOfWeek.Monday, 15, 0, 17, 0, 'Code Review', '#06b6d4', 'Overlaps with sprint planning'),
-  
+
   // Tuesday - overlapping events
   createEvent('3', DayOfWeek.Tuesday, 11, 0, 12, 0, '1-on-1', '#10b981', 'Team member check-in'),
   createEvent('3a', DayOfWeek.Tuesday, 10, 45, 11, 30, 'Quick Sync', '#f97316', 'Overlaps with 1-on-1'),
   createEvent('3b', DayOfWeek.Tuesday, 11, 30, 12, 30, 'Lunch Meeting', '#84cc16', 'Overlaps with 1-on-1'),
-  
+
   // Wednesday - overlapping events
   createEvent('4', DayOfWeek.Wednesday, 13, 0, 14, 0, 'Design Review', '#f59e0b', 'Review new designs'),
   createEvent('4a', DayOfWeek.Wednesday, 12, 30, 13, 30, 'Design Workshop', '#a855f7', 'Overlaps with review'),
   createEvent('4b', DayOfWeek.Wednesday, 13, 45, 14, 30, 'Follow-up', '#14b8a6', 'Overlaps with review'),
-   
+
   // Thursday - one event in the morning then a big cluster in the afternoon
   createEvent('55', DayOfWeek.Thursday, 10, 0, 11, 0, 'Team Meeting', '#6366f1', 'Weekly team meeting'),
 
@@ -52,7 +52,7 @@ const events: ScheduleEvent[] = [
   createEvent('5b', DayOfWeek.Thursday, 15, 30, 16, 30, 'Project Sync', '#22c55e', 'Overlaps with team meeting'),
   createEvent('5c', DayOfWeek.Thursday, 15, 30, 16, 30, 'Project Clink', '#22c88f', 'Overlaps with team meeting also'),
   createEvent('5d', DayOfWeek.Thursday, 15, 0, 16, 0, 'Team Meeting 2', '#6366f1', 'Weekly team meeting'),
-  
+
   // Friday
   createEvent('6', DayOfWeek.Friday, 15, 0, 16, 0, 'Retro', '#ec4899', 'Sprint retrospective')
 ];
@@ -97,14 +97,7 @@ const result = WeeklySchedule.create(
       unzoom: 'close_fullscreen',
       cta: 'zoom_in'
     },
-    // Example tooltip function - shows event details on hover
-    getEventTooltip: (event) => {
-      return `
-        <strong>${event.title}</strong><br>
-        <small>${event.startTime.toString()} - ${event.endTime.toString()}</small><br>
-        ${event.description || 'No description'}
-      `;
-    }
+
   },
   events
 );
@@ -122,7 +115,7 @@ if (!result.success) {
   alert(`Error creating schedule: ${result.error.message}`);
 } else {
   const schedule = result.data;
-  
+
   // Expose schedule instance for debugging
   (window as any).schedule = schedule;
 }
