@@ -12,10 +12,10 @@ export function timeToSlotIndex(
   time: TimeOnly,
   startHour: Hour,
   timeSlotInterval: TimeSlotInterval
-): number {
-  const hoursFromStart = time.hours - startHour;
-  const totalMinutes = hoursFromStart * 60 + time.minutes;
-  return Math.floor(totalMinutes / timeSlotInterval);
+): number { // time: 16:15, startHour: 9, timeSlotInterval: 60
+  const hoursFromStart = time.hours - startHour; // 16 - 9 = 7
+  const totalMinutes = hoursFromStart * 60 + time.minutes; // 7 * 60 + 15 = 435
+  return Math.floor(totalMinutes / timeSlotInterval); // Math.floor(435 / 60) = 7
 }
 
 
@@ -30,12 +30,12 @@ export function timeToSlotOffset(
   time: TimeOnly,
   startHour: Hour,
   timeSlotInterval: TimeSlotInterval
-): number {
-  const hoursFromStart = time.hours - startHour;
-  const totalMinutes = hoursFromStart * 60 + time.minutes;
-  const slotIndex = Math.floor(totalMinutes / timeSlotInterval);
-  const minutesIntoSlot = totalMinutes - (slotIndex * timeSlotInterval);
-  return minutesIntoSlot / timeSlotInterval;
+): number { // time: 16:15, startHour: 9, timeSlotInterval: 60
+  const hoursFromStart = time.hours - startHour; // 16 - 9 = 7
+  const totalMinutes = hoursFromStart * 60 + time.minutes; // 7 * 60 + 15 = 435
+  const slotIndex = Math.floor(totalMinutes / timeSlotInterval); // Math.floor(435 / 60) = 7
+  const minutesIntoSlot = totalMinutes - (slotIndex * timeSlotInterval); // 435 - (7 * 60) = 15
+  return minutesIntoSlot / timeSlotInterval; // 15 / 60 = 0.25
 }
 
 /**
@@ -57,85 +57,98 @@ export function calculateEventPosition(
   orientation: ScheduleOrientation,
   laneInfo?: LaneInfo
 ): LayoutEvent {
-  // Calculate which slots the event spans (integer positions)
-  const startSlot = timeToSlotIndex(event.startTime, startHour, timeSlotInterval);
-  const endSlot = timeToSlotIndex(event.endTime, startHour, timeSlotInterval);
-  
-  // Calculate fractional offsets within the start and end slots
-  const startOffset = timeToSlotOffset(event.startTime, startHour, timeSlotInterval);
-  const endOffset = timeToSlotOffset(event.endTime, startHour, timeSlotInterval);
-  
   const dayIndex = visibleDays.indexOf(event.day);
-  
-  if (orientation === ScheduleOrientation.Horizontal) {
-    const spanSlots = endSlot - startSlot;
-    const leftPercent = startOffset * 100;
-    
-    // Calculate actual duration in slots (fractional)
-    const actualDurationInSlots = spanSlots > 0 
-      ? ((1 - startOffset) + (spanSlots - 1) + endOffset)
-      : (endOffset - startOffset);
-    
-    // Width percentage should be relative to the column span, not the entire grid
-    // If event spans 2 columns and has 1.5 slots duration, it should be 75% of those 2 columns
-    const widthPercent = spanSlots > 0 
-      ? (actualDurationInSlots / spanSlots) * 100
-      : actualDurationInSlots * 100;
-    
-    let topPercent = 0;
-    let heightPercent = 100;
-    if (laneInfo && laneInfo.totalLanes > 1) {
-      heightPercent = 100 / laneInfo.totalLanes;
-      topPercent = (laneInfo.laneIndex / laneInfo.totalLanes) * 100;
-    }
-    
-    return {
-      ...event,
-      gridRowStart: dayIndex + 1,
-      gridRowEnd: dayIndex + 2, // Days span 1 row
-      gridColumnStart: startSlot + 1,
-      gridColumnEnd: endSlot + 1,
-      leftPercent,
-      widthPercent,
-      topPercent,
-      heightPercent,
-      laneInfo
-    };
-  } else {
-    const spanSlots = endSlot - startSlot;
-    const topPercent = startOffset * 100;
-    
-    const actualHeightInSlots = spanSlots > 0 
-      ? ((1 - startOffset) + (spanSlots - 1) + endOffset) 
-      : endOffset - startOffset;
-    const heightPercent = spanSlots > 0 
-      ? (actualHeightInSlots / spanSlots) * 100 
-      : actualHeightInSlots * 100;
-    
-    if (event.id === '5a') {
-      console.log(actualHeightInSlots, spanSlots, heightPercent, endSlot, startSlot, startOffset, endOffset);
-    }
+  const daySpan: SpanRange = { 
+    start: dayIndex + 1,
+    end: dayIndex + 2
+  };
 
-    let leftPercent = 0;
-    let widthPercent = 100;
-    if (laneInfo && laneInfo.totalLanes > 1) {
-      widthPercent = 100 / laneInfo.totalLanes;
-      leftPercent = (laneInfo.laneIndex / laneInfo.totalLanes) * 100;
-    }
-    
+   
+  // Always span exactly one slot for the time axis
+  // Sizing and positioning will be handled by absolute positioning relative to this single slot
+  const startSlot = timeToSlotIndex(event.startTime, startHour, timeSlotInterval);
+  const timeSpan: SpanRange = {
+    start: startSlot + 1,
+    end: startSlot + 2 
+  };
+
+  const lengthAxis: AxisSizing = calculateEventLengthAxis(event, startHour, timeSlotInterval);
+  const widthAxis: AxisSizing = calculateEventWidthAxis(laneInfo);
+
+  if (orientation === ScheduleOrientation.Horizontal) {
     return {
       ...event,
-      gridRowStart: startSlot + 1,
-      gridRowEnd: endSlot + 1,
-      gridColumnStart: dayIndex + 1,
-      gridColumnEnd: dayIndex + 2, // Days span 1 column
-      topPercent,
-      heightPercent,
-      leftPercent,
-      widthPercent,
+      gridRowStart: daySpan.start,
+      gridRowEnd: daySpan.end,
+      gridColumnStart: timeSpan.start,
+      gridColumnEnd: timeSpan.end,
+      leftPercent: lengthAxis.start,
+      widthPercent: lengthAxis.size,
+      topPercent: widthAxis.start,
+      heightPercent: widthAxis.size,
       laneInfo
     };
   }
+
+  return {
+    ...event,
+    gridRowStart: timeSpan.start,
+    gridRowEnd: timeSpan.end,
+    gridColumnStart: daySpan.start,
+    gridColumnEnd: daySpan.end,
+    leftPercent: widthAxis.start,
+    widthPercent: widthAxis.size,
+    topPercent: lengthAxis.start,
+    heightPercent: lengthAxis.size,
+    laneInfo
+  };
+}
+
+interface SpanRange {
+  start: number;
+  end: number;
+}
+
+interface AxisSizing {
+  start: number;
+  size: number;
+}
+
+function calculateEventWidthAxis(laneInfo: LaneInfo | undefined): AxisSizing {
+  if (laneInfo && laneInfo.totalLanes > 1) {
+    return {
+      start: (laneInfo.laneIndex / laneInfo.totalLanes) * 100,
+      size: 100 / laneInfo.totalLanes
+    }
+  }
+
+  return {
+    start: 0,
+    size: 100
+  };
+}
+
+function calculateEventLengthAxis(event: ScheduleEvent, startHour: Hour, timeSlotInterval: TimeSlotInterval): AxisSizing {
+  const startSlot = timeToSlotIndex(event.startTime, startHour, timeSlotInterval);
+  const endSlot = timeToSlotIndex(event.endTime, startHour, timeSlotInterval);
+  
+  const startOffset = timeToSlotOffset(event.startTime, startHour, timeSlotInterval);
+  const endOffset = timeToSlotOffset(event.endTime, startHour, timeSlotInterval);
+
+  const spanSlots = endSlot - startSlot;
+  const startPercent = startOffset * 100;
+
+  const actualDurationInSlots = spanSlots > 0
+    ? ((1 - startOffset) + (spanSlots - 1) + endOffset)
+    : (endOffset - startOffset);
+
+  // Width/Height is always relative to a single slot (100% = 1 slot)
+  const lengthPercent = actualDurationInSlots * 100;
+  
+  return {
+    start: startPercent,
+    size: lengthPercent
+  };
 }
 
 /**
@@ -150,8 +163,6 @@ export function eventsOverlap(event1: ScheduleEvent, event2: ScheduleEvent): boo
     return false;
   }
   
-  // Check if time ranges overlap
-  // Overlap occurs when: event1 starts before event2 ends AND event1 ends after event2 starts
   const start1 = event1.startTime.toMinutes();
   const end1 = event1.endTime.toMinutes();
   const start2 = event2.startTime.toMinutes();
@@ -189,24 +200,19 @@ export function assignLanes(events: ScheduleEvent[]): Map<string, LaneInfo> {
     return new Map();
   }
   
-  // Sort events by start time
   const sorted = [...events].sort((a, b) => {
     const startA = a.startTime.toMinutes();
     const startB = b.startTime.toMinutes();
     if (startA !== startB) {
       return startA - startB;
     }
-    // If same start time, sort by end time (longer events first)
     return b.endTime.toMinutes() - a.endTime.toMinutes();
   });
   
-  // Lanes: array of arrays, each inner array contains events in that lane
   const lanes: ScheduleEvent[][] = [];
   const laneMap = new Map<string, LaneInfo>();
   
-  // First pass: assign events to lanes
   for (const event of sorted) {
-    // Find first lane where event doesn't overlap with existing events
     let assigned = false;
     for (let i = 0; i < lanes.length; i++) {
       const laneEvents = lanes[i];
@@ -219,7 +225,6 @@ export function assignLanes(events: ScheduleEvent[]): Map<string, LaneInfo> {
       }
     }
     
-    // If no lane available, create new lane
     if (!assigned) {
       lanes.push([event]);
       laneMap.set(event.id, { laneIndex: lanes.length - 1, totalLanes: 0 }); // totalLanes will be updated in second pass
@@ -234,7 +239,6 @@ export function assignLanes(events: ScheduleEvent[]): Map<string, LaneInfo> {
     // Find which conflict group this event belongs to
     let groupFound = false;
     for (const group of conflictGroups) {
-      // Check if this event overlaps with any event in the group
       for (const eventId of group) {
         const otherEvent = sorted.find(e => e.id === eventId);
         if (otherEvent && eventsOverlap(event, otherEvent)) {
@@ -249,14 +253,12 @@ export function assignLanes(events: ScheduleEvent[]): Map<string, LaneInfo> {
     // If not in any group, create new group
     if (!groupFound) {
       const newGroup = new Set<string>([event.id]);
-      // Find all events that overlap with this event (transitively)
       let changed = true;
       while (changed) {
         changed = false;
         for (const otherEvent of sorted) {
           if (newGroup.has(otherEvent.id)) continue;
           
-          // Check if this event overlaps with any event in the group
           for (const eventId of newGroup) {
             const groupEvent = sorted.find(e => e.id === eventId);
             if (groupEvent && eventsOverlap(groupEvent, otherEvent)) {
@@ -271,9 +273,7 @@ export function assignLanes(events: ScheduleEvent[]): Map<string, LaneInfo> {
     }
   }
   
-  // Update totalLanes for each conflict group
   for (const group of conflictGroups) {
-    // Find the maximum number of lanes used by events in this group
     const lanesUsed = new Set<number>();
     for (const eventId of group) {
       const info = laneMap.get(eventId);
@@ -283,7 +283,6 @@ export function assignLanes(events: ScheduleEvent[]): Map<string, LaneInfo> {
     }
     const maxLanes = lanesUsed.size;
     
-    // Update all events in this conflict group with the correct totalLanes
     for (const eventId of group) {
       const info = laneMap.get(eventId);
       if (info) {
