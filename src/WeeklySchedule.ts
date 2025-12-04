@@ -28,6 +28,8 @@ export class WeeklySchedule {
   private zoomedDay: DayOfWeek | null = null;
   private pendingScrollTargetId: string | null = null;
   private resizeObserver: ResizeObserver;
+  private hoveredElement: HTMLElement | null = null;
+  private hoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Factory method to create a WeeklySchedule instance with validation
@@ -142,11 +144,11 @@ export class WeeklySchedule {
       </div>
     `;
 
+    this.cleanupHoverListeners();
     this.container.innerHTML = html;
+    setTimeout(() => this.attachHoverListeners(), 0);
 
-    // Post-render scroll logic for classic view
     if (!isMobile && this.zoomedDay !== null) {
-      // Prefer pending specific target if set (e.g., from overflow click)
       if (this.pendingScrollTargetId) {
         const targetEl = this.container.querySelector<HTMLElement>(`.events-grid .event[data-event-id="${this.pendingScrollTargetId}"]`);
         if (targetEl) {
@@ -321,7 +323,6 @@ export class WeeklySchedule {
       // Sort by start for stable selection
       const sorted = [...dayEvents].sort((a, b) => a.startTime.toMinutes() - b.startTime.toMinutes());
 
-      // Build conflict groups (transitive overlap)
       const conflictGroups: ScheduleEvent[][] = [];
       for (const ev of sorted) {
         let placed = false;
@@ -497,57 +498,81 @@ export class WeeklySchedule {
         return;
       }
     });
+  }
 
-    this.container.addEventListener('mouseover', (e: Event) => {
-      const scheduleRoot = this.container.querySelector('.weekly-schedule');
-      if (scheduleRoot?.classList.contains('mobile')) {
-        return;
-      }
+  /**
+   * Clean up hover state before re-rendering
+   */
+  private cleanupHoverListeners(): void {
+    if (this.hoverTimeout !== null) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = null;
+    }
 
-      const target = e.target as HTMLElement;
-      const eventEl = target.closest('.event') as HTMLElement | null;
-      if (!eventEl || eventEl.classList.contains('event-overflow-indicator')) {
-        return;
-      }
+    // Reset hover state (element is already removed from DOM via innerHTML, so listeners are automatically cleaned up)
+    this.hoveredElement = null;
+  }
 
-      const eventId = eventEl.getAttribute('data-event-id');
-      const scheduleEvent = this.allEvents.find(ev => ev.id === eventId);
-      if (!scheduleEvent) {
-        return;
-      }
+  /**
+   * Attach hover listeners to event elements
+   */
+  private attachHoverListeners(): void {
+    const scheduleRoot = this.container.querySelector('.weekly-schedule');
+    if (scheduleRoot?.classList.contains('mobile')) {
+      return;
+    }
 
-      const hoverEvent = new CustomEvent('schedule-event-hover', {
-        detail: { event: scheduleEvent, element: eventEl },
-        bubbles: true,
-        cancelable: true
-      });
-      this.container.dispatchEvent(hoverEvent);
-    });
+    const eventElements = this.container.querySelectorAll<HTMLElement>('.event:not(.event-overflow-indicator)');
 
-    this.container.addEventListener('mouseout', (e: Event) => {
-      const scheduleRoot = this.container.querySelector('.weekly-schedule');
-      if (scheduleRoot?.classList.contains('mobile')) {
-        return;
-      }
+    eventElements.forEach(element => {
+      const enterHandler = (_e: MouseEvent) => {
+        if (this.hoverTimeout !== null) {
+          clearTimeout(this.hoverTimeout);
+          this.hoverTimeout = null;
+        }
 
-      const target = e.target as HTMLElement;
-      const eventEl = target.closest('.event') as HTMLElement | null;
-      if (!eventEl || eventEl.classList.contains('event-overflow-indicator')) {
-        return;
-      }
+        if (this.hoveredElement === element) {
+          return;
+        }
 
-      const eventId = eventEl.getAttribute('data-event-id');
-      const scheduleEvent = this.allEvents.find(ev => ev.id === eventId);
-      if (!scheduleEvent) {
-        return;
-      }
+        this.hoveredElement = element;
 
-      const hoverEndEvent = new CustomEvent('schedule-event-hover-end', {
-        detail: { event: scheduleEvent, element: eventEl },
-        bubbles: true,
-        cancelable: true
-      });
-      this.container.dispatchEvent(hoverEndEvent);
+        const eventId = element.getAttribute('data-event-id');
+        const event = this.allEvents.find(ev => ev.id === eventId);
+
+        if (event) {
+          this.container.dispatchEvent(new CustomEvent('schedule-event-hover', {
+            detail: { event, element },
+            bubbles: true,
+            cancelable: true
+          }));
+        }
+      };
+
+      const leaveHandler = (_e: MouseEvent) => {
+        if (this.hoveredElement !== element) {
+          return;
+        }
+
+        this.hoveredElement = null;
+
+        this.hoverTimeout = setTimeout(() => {
+          const eventId = element.getAttribute('data-event-id');
+          const event = this.allEvents.find(ev => ev.id === eventId);
+
+          if (event) {
+            this.container.dispatchEvent(new CustomEvent('schedule-event-hover-end', {
+              detail: { event, element },
+              bubbles: true,
+              cancelable: true
+            }));
+          }
+          this.hoverTimeout = null;
+        }, 50);
+      };
+
+      element.addEventListener('mouseenter', enterHandler);
+      element.addEventListener('mouseleave', leaveHandler);
     });
   }
 
@@ -571,8 +596,6 @@ export class WeeklySchedule {
       scroll.scrollLeft = Math.max(0, Math.floor(offsetLeft));
     }
   }
-
-  // Tooltip rendering removed; external consumers handle hover via custom events.
 
   /**
    * Get current events array (copy)
@@ -728,6 +751,7 @@ export class WeeklySchedule {
    * Clean up component and remove event listeners
    */
   destroy(): void {
+    this.cleanupHoverListeners();
     this.container.innerHTML = '';
     this.events = [];
     this.resizeObserver.disconnect();
