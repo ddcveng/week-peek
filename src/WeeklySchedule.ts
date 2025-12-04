@@ -12,7 +12,7 @@ import { validateConfig, validateEvent } from './utils/validators';
 import { calculateEventPosition, groupEventsByDay, assignLanes } from './utils/layoutHelpers';
 import { createTimeLabelHTML, generateTimeSlots } from './templates/timeAxisTemplate';
 import { createDayHeaderHTML } from './templates/dayColumnTemplate';
-import { createEventHTML, createEventHTMLHorizontal } from './templates/eventTemplate';
+import { createEventHTML, createEventHTMLHorizontal, createOverflowIndicatorHTML } from './templates/eventTemplate';
 import './styles/main.scss';
 
 /**
@@ -105,7 +105,7 @@ export class WeeklySchedule {
 
       orientation: config.orientation ?? ScheduleOrientation.Vertical,
       icons: config.icons,
-
+      renderEvent: config.renderEvent,
     } as ScheduleConfig;
 
     this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
@@ -391,7 +391,10 @@ export class WeeklySchedule {
       laneInfo
     );
 
-    const eventHTML = this.config.orientation === ScheduleOrientation.Horizontal
+    const isOverflowIndicator = event.className?.includes('event-overflow-indicator');
+    const eventHTML = isOverflowIndicator 
+    ? createOverflowIndicatorHTML(event, laneInfo) 
+    : this.config.orientation === ScheduleOrientation.Horizontal
       ? createEventHTMLHorizontal(event, laneInfo, this.config.renderEvent)
       : createEventHTML(event, laneInfo, this.config.renderEvent);
 
@@ -746,7 +749,8 @@ export class WeeklySchedule {
       dayNameTranslations: mergedConfig.dayNameTranslations,
 
       orientation: mergedConfig.orientation ?? this.config.orientation!,
-
+      icons: mergedConfig.icons ?? this.config.icons,
+      renderEvent: mergedConfig.renderEvent ?? this.config.renderEvent,
     } as ScheduleConfig;
 
     this.render();
