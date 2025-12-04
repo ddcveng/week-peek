@@ -30,6 +30,7 @@ export class WeeklySchedule {
   private resizeObserver: ResizeObserver;
   private hoveredElement: HTMLElement | null = null;
   private hoverTimeout: ReturnType<typeof setTimeout> | null = null;
+  private attachHoverListenersTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Factory method to create a WeeklySchedule instance with validation
@@ -146,7 +147,10 @@ export class WeeklySchedule {
 
     this.cleanupHoverListeners();
     this.container.innerHTML = html;
-    setTimeout(() => this.attachHoverListeners(), 0);
+    this.attachHoverListenersTimeout = setTimeout(() => {
+      this.attachHoverListeners();
+      this.attachHoverListenersTimeout = null;
+    }, 0);
 
     if (!isMobile && this.zoomedDay !== null) {
       if (this.pendingScrollTargetId) {
@@ -507,6 +511,12 @@ export class WeeklySchedule {
     if (this.hoverTimeout !== null) {
       clearTimeout(this.hoverTimeout);
       this.hoverTimeout = null;
+    }
+
+    // Cancel any pending attachHoverListeners timeout to prevent duplicate listeners
+    if (this.attachHoverListenersTimeout !== null) {
+      clearTimeout(this.attachHoverListenersTimeout);
+      this.attachHoverListenersTimeout = null;
     }
 
     // Reset hover state (element is already removed from DOM via innerHTML, so listeners are automatically cleaned up)
