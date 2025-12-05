@@ -55,7 +55,8 @@ export function calculateEventPosition(
   timeSlotInterval: TimeSlotInterval,
   visibleDays: DayOfWeek[],
   orientation: ScheduleOrientation,
-  laneInfo?: LaneInfo
+  laneInfo?: LaneInfo,
+  gap?: string | number
 ): LayoutEvent {
   const dayIndex = visibleDays.indexOf(event.day);
   const daySpan: SpanRange = { 
@@ -73,7 +74,7 @@ export function calculateEventPosition(
   };
 
   const lengthAxis: AxisSizing = calculateEventLengthAxis(event, startHour, timeSlotInterval);
-  const widthAxis: AxisSizing = calculateEventWidthAxis(laneInfo);
+  const widthAxis: AxisSizing = calculateEventWidthAxis(laneInfo, gap);
 
   if (orientation === ScheduleOrientation.Horizontal) {
     return {
@@ -86,7 +87,8 @@ export function calculateEventPosition(
       widthPercent: lengthAxis.size,
       topPercent: widthAxis.start,
       heightPercent: widthAxis.size,
-      laneInfo
+      laneInfo,
+      gap: widthAxis.gap
     };
   }
 
@@ -100,7 +102,8 @@ export function calculateEventPosition(
     widthPercent: widthAxis.size,
     topPercent: lengthAxis.start,
     heightPercent: lengthAxis.size,
-    laneInfo
+    laneInfo,
+    gap: widthAxis.gap
   };
 }
 
@@ -112,14 +115,22 @@ interface SpanRange {
 interface AxisSizing {
   start: number;
   size: number;
+  gap?: string | number; // Gap value to be used in CSS calc()
 }
 
-function calculateEventWidthAxis(laneInfo: LaneInfo | undefined): AxisSizing {
+function calculateEventWidthAxis(laneInfo: LaneInfo | undefined, gap?: string | number): AxisSizing {
   if (laneInfo && laneInfo.totalLanes > 1) {
-    return {
+    const result: AxisSizing = {
       start: (laneInfo.laneIndex / laneInfo.totalLanes) * 100,
       size: 100 / laneInfo.totalLanes
+    };
+    
+    // Store gap value if provided (will be used in CSS calc())
+    if (gap !== undefined) {
+      result.gap = gap;
     }
+    
+    return result;
   }
 
   return {

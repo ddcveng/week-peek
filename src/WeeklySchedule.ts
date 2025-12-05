@@ -106,6 +106,8 @@ export class WeeklySchedule {
       orientation: config.orientation ?? ScheduleOrientation.Vertical,
       icons: config.icons,
       renderEvent: config.renderEvent,
+      eventGap: config.eventGap,
+      overflowIndicatorFormat: config.overflowIndicatorFormat,
     } as ScheduleConfig;
 
     this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
@@ -347,12 +349,14 @@ export class WeeklySchedule {
           const hiddenCount = groupSize - OVERLAP_VISIBLE_COUNT;
           const earliest = group.reduce((min, e) => (e.startTime.toMinutes() < min.startTime.toMinutes() ? e : min), group[0]);
           const latest = group.reduce((max, e) => (e.endTime.toMinutes() > max.endTime.toMinutes() ? e : max), group[0]);
+          const title = this.config.overflowIndicatorFormat ? this.config.overflowIndicatorFormat(hiddenCount) : `+${hiddenCount} more`;
+
           const overflowEvent: ScheduleEvent = {
             id: `overflow-${day}-${earliest.id}`,
             day,
             startTime: earliest.startTime,
             endTime: latest.endTime,
-            title: `+${hiddenCount} more`,
+            title,
             description: undefined,
             className: 'event-overflow-indicator'
           };
@@ -388,7 +392,8 @@ export class WeeklySchedule {
       this.config.timeSlotInterval!,
       this.config.visibleDays!,
       this.config.orientation!,
-      laneInfo
+      laneInfo,
+      this.config.eventGap
     );
 
     const isOverflowIndicator = event.className?.includes('event-overflow-indicator');
@@ -405,17 +410,36 @@ export class WeeklySchedule {
     // Positioning values are calculated in calculateEventPosition based on orientation
     // Both time-based positioning and lane-based positioning are always applied
     let positioningStyle = 'position: absolute;';
+    
+    // Determine if gap should be applied (only for events in lanes with gap configured)
+    // Don't apply gap to the last event in a lane (no gap after the last element)
+    const isLastInLane = laneInfo && laneInfo.laneIndex === laneInfo.totalLanes - 1;
+    const shouldApplyGap = layout.gap !== undefined && laneInfo && laneInfo.totalLanes > 1 && !isLastInLane;
+    const gapValue = shouldApplyGap ? (typeof layout.gap === 'number' ? `${layout.gap}px` : layout.gap) : undefined;
+    
     if (layout.leftPercent !== undefined) {
       positioningStyle += ` left: ${layout.leftPercent}%;`;
     }
     if (layout.widthPercent !== undefined) {
-      positioningStyle += ` width: ${layout.widthPercent}%;`;
+      // Gap applies to width in vertical orientation (lane dimension)
+      // In horizontal orientation, width is time dimension, so no gap
+      if (shouldApplyGap && this.config.orientation === ScheduleOrientation.Vertical) {
+        positioningStyle += ` width: calc(${layout.widthPercent}% - ${gapValue});`;
+      } else {
+        positioningStyle += ` width: ${layout.widthPercent}%;`;
+      }
     }
     if (layout.topPercent !== undefined) {
       positioningStyle += ` top: ${layout.topPercent}%;`;
     }
     if (layout.heightPercent !== undefined) {
-      positioningStyle += ` height: ${layout.heightPercent}%;`;
+      // Gap applies to height in horizontal orientation (lane dimension)
+      // In vertical orientation, height is time dimension, so no gap
+      if (shouldApplyGap && this.config.orientation === ScheduleOrientation.Horizontal) {
+        positioningStyle += ` height: calc(${layout.heightPercent}% - ${gapValue});`;
+      } else {
+        positioningStyle += ` height: ${layout.heightPercent}%;`;
+      }
     }
 
     const fullStyle = `${gridStyle} ${positioningStyle}`;
@@ -751,6 +775,8 @@ export class WeeklySchedule {
       orientation: mergedConfig.orientation ?? this.config.orientation!,
       icons: mergedConfig.icons ?? this.config.icons,
       renderEvent: mergedConfig.renderEvent ?? this.config.renderEvent,
+      eventGap: mergedConfig.eventGap !== undefined ? mergedConfig.eventGap : this.config.eventGap,
+      overflowIndicatorFormat: mergedConfig.overflowIndicatorFormat ?? this.config.overflowIndicatorFormat,
     } as ScheduleConfig;
 
     this.render();

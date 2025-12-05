@@ -174,7 +174,35 @@ export function validateConfig(config: unknown): Result<void, ValidationError[]>
     }
   }
 
-
+  // Validate eventGap
+  if (c.eventGap !== undefined) {
+    if (typeof c.eventGap === 'number') {
+      if (c.eventGap < 0 || !Number.isFinite(c.eventGap)) {
+        errors.push({
+          field: 'eventGap',
+          message: 'eventGap must be a non-negative finite number',
+          value: c.eventGap
+        });
+      }
+    } else if (typeof c.eventGap === 'string') {
+      // Validate CSS length unit format (e.g., "4px", "0.5rem", "1em", "10%")
+      // Basic regex to match CSS length units: number followed by unit
+      const cssLengthRegex = /^-?\d*\.?\d+(px|rem|em|ch|ex|vh|vw|vmin|vmax|%|cm|mm|in|pt|pc)$/i;
+      if (!cssLengthRegex.test(c.eventGap.trim())) {
+        errors.push({
+          field: 'eventGap',
+          message: 'eventGap must be a valid CSS length unit (e.g., "4px", "0.5rem", "1em")',
+          value: c.eventGap
+        });
+      }
+    } else {
+      errors.push({
+        field: 'eventGap',
+        message: 'eventGap must be a number or a CSS unit string',
+        value: c.eventGap
+      });
+    }
+  }
 
   if (errors.length > 0) {
     return { success: false, error: errors };

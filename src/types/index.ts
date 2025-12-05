@@ -270,7 +270,17 @@ export interface ScheduleConfig {
    */
   icons?: IconConfig;
 
+  /**
+   * Gap between overlapping events in lanes
+   * Can be a number (pixels) or a CSS unit string (e.g., "4px", "0.5rem", "1em")
+   * Default: undefined (no gap, events fill available space)
+   * Only applies to events in lanes (overlapping events)
+   */
+  eventGap?: string | number;
+
   renderEvent?: (event: ScheduleEvent, context: RenderContext) => string;
+
+  overflowIndicatorFormat?: (overflowEvents: number) => string;
 }
 
 /**
@@ -325,6 +335,12 @@ export interface LayoutEvent extends ScheduleEvent {
    * Optional lane assignment for overlapping events
    */
   laneInfo?: LaneInfo;
+
+  /**
+   * Gap value for CSS calc() when applying gaps between lane events
+   * @internal
+   */
+  gap?: string | number;
 }
 
 /**
