@@ -13,7 +13,7 @@ import { validateConfig, validateEvent } from './utils/validators';
 import { calculateEventPosition, groupEventsByDay, assignLanes } from './utils/layoutHelpers';
 import { createTimeLabelHTML, generateTimeSlots } from './templates/timeAxisTemplate';
 import { createDayHeaderHTML } from './templates/dayColumnTemplate';
-import { createEventHTML, createEventHTMLHorizontal, createOverflowIndicatorHTML } from './templates/eventTemplate';
+import { createEventHTML, createOverflowIndicatorHTML } from './templates/eventTemplate';
 import './styles/main.scss';
 
 /**
@@ -237,7 +237,7 @@ export class WeeklySchedule {
           <div class="mobile-day-header">${getDayName(day, this.config.dayNameTranslations)}</div>
           <div class="mobile-event-list">
             ${dayEvents.map(event => `
-              <div class="mobile-event" data-event-id="${event.id}" style="border-left-color: ${event.color || 'var(--schedule-primary-color)'}">
+              <div class="mobile-event" data-event-id="${event.id}" style="border-left-color: var(--schedule-primary-color)">
                 <div class="mobile-event-time">${event.startTime.toString()}</div>
                 <div class="mobile-event-details">
                   <div class="mobile-event-title">${event.title}</div>

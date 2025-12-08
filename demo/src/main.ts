@@ -5,33 +5,33 @@ import { showTooltip, hideTooltip } from './tooltip';
 // Sample events with deliberate conflicts to showcase +n more badges
 const events = [
   // Monday cluster
-  { id: '1', day: DayOfWeek.Monday, title: 'Team Standup', startTime: new TimeOnly(10, 0), endTime: new TimeOnly(11, 0), description: 'Daily team sync', color: '#3b82f6' },
-  { id: '1a', day: DayOfWeek.Monday, title: 'Client Call', startTime: new TimeOnly(10, 30), endTime: new TimeOnly(11, 30), description: 'Overlaps with standup', color: '#ef4444' },
-  { id: '2', day: DayOfWeek.Monday, title: 'Sprint Planning', startTime: new TimeOnly(14, 0), endTime: new TimeOnly(16, 0), description: 'Plan next sprint', color: '#8b5cf6' },
-  { id: '2a', day: DayOfWeek.Monday, title: 'Code Review', startTime: new TimeOnly(15, 0), endTime: new TimeOnly(17, 0), description: 'Overlaps with sprint planning', color: '#06b6d4' },
+  { id: '1', day: DayOfWeek.Monday, title: 'Team Standup', startTime: new TimeOnly(10, 0), endTime: new TimeOnly(11, 0), description: 'Daily team sync', style: 'background-color: #3b82f6;' },
+  { id: '1a', day: DayOfWeek.Monday, title: 'Client Call', startTime: new TimeOnly(10, 30), endTime: new TimeOnly(11, 30), description: 'Overlaps with standup', style: 'background-color: #ef4444;' },
+  { id: '2', day: DayOfWeek.Monday, title: 'Sprint Planning', startTime: new TimeOnly(14, 0), endTime: new TimeOnly(16, 0), description: 'Plan next sprint', style: 'background-color: #8b5cf6;' },
+  { id: '2a', day: DayOfWeek.Monday, title: 'Code Review', startTime: new TimeOnly(15, 0), endTime: new TimeOnly(17, 0), description: 'Overlaps with sprint planning', style: 'background-color: #06b6d4;' },
 
   // Tuesday cluster with transitive overlap
-  { id: '3', day: DayOfWeek.Tuesday, title: '1-on-1', startTime: new TimeOnly(11, 0), endTime: new TimeOnly(12, 0), description: 'Team member check-in', color: '#10b981' },
-  { id: '3a', day: DayOfWeek.Tuesday, title: 'Quick Sync', startTime: new TimeOnly(10, 45), endTime: new TimeOnly(11, 30), description: 'Overlaps with 1-on-1', color: '#f97316' },
-  { id: '3b', day: DayOfWeek.Tuesday, title: 'Lunch Meeting', startTime: new TimeOnly(11, 30), endTime: new TimeOnly(12, 30), description: 'Overlaps with 1-on-1', color: '#84cc16' },
+  { id: '3', day: DayOfWeek.Tuesday, title: '1-on-1', startTime: new TimeOnly(11, 0), endTime: new TimeOnly(12, 0), description: 'Team member check-in', style: 'background-color: #10b981;' },
+  { id: '3a', day: DayOfWeek.Tuesday, title: 'Quick Sync', startTime: new TimeOnly(10, 45), endTime: new TimeOnly(11, 30), description: 'Overlaps with 1-on-1', style: 'background-color: #f97316;' },
+  { id: '3b', day: DayOfWeek.Tuesday, title: 'Lunch Meeting', startTime: new TimeOnly(11, 30), endTime: new TimeOnly(12, 30), description: 'Overlaps with 1-on-1', style: 'background-color: #84cc16;' },
 
   // Wednesday cluster
-  { id: '4', day: DayOfWeek.Wednesday, title: 'Design Review', startTime: new TimeOnly(13, 0), endTime: new TimeOnly(14, 0), description: 'Review new designs', color: '#f59e0b' },
-  { id: '4a', day: DayOfWeek.Wednesday, title: 'Design Workshop', startTime: new TimeOnly(12, 30), endTime: new TimeOnly(13, 30), description: 'Overlaps with review', color: '#a855f7' },
-  { id: '4b', day: DayOfWeek.Wednesday, title: 'Follow-up', startTime: new TimeOnly(13, 45), endTime: new TimeOnly(14, 30), description: 'Overlaps with review', color: '#14b8a6' },
+  { id: '4', day: DayOfWeek.Wednesday, title: 'Design Review', startTime: new TimeOnly(13, 0), endTime: new TimeOnly(14, 0), description: 'Review new designs', style: 'background-color: #f59e0b;' },
+  { id: '4a', day: DayOfWeek.Wednesday, title: 'Design Workshop', startTime: new TimeOnly(12, 30), endTime: new TimeOnly(13, 30), description: 'Overlaps with review', style: 'background-color: #a855f7;' },
+  { id: '4b', day: DayOfWeek.Wednesday, title: 'Follow-up', startTime: new TimeOnly(13, 45), endTime: new TimeOnly(14, 30), description: 'Overlaps with review', style: 'background-color: #14b8a6;' },
 
   // Thursday large overlap group to trigger +n more
-  { id: '55', day: DayOfWeek.Thursday, title: 'Team Meeting', startTime: new TimeOnly(10, 0), endTime: new TimeOnly(11, 0), description: 'Weekly team meeting', color: '#6366f1' },
-  { id: '5', day: DayOfWeek.Thursday, title: 'Team Meeting', startTime: new TimeOnly(15, 0), endTime: new TimeOnly(16, 0), description: 'Weekly team meeting', color: '#6366f1' },
-  { id: '5a', day: DayOfWeek.Thursday, title: 'Quick Update', startTime: new TimeOnly(15, 15), endTime: new TimeOnly(16, 45), description: 'Fully within team meeting', color: '#ec4899' },
-  { id: '5b', day: DayOfWeek.Thursday, title: 'Project Sync', startTime: new TimeOnly(15, 30), endTime: new TimeOnly(16, 30), description: 'Overlaps with team meeting', color: '#22c55e' },
-  { id: '5c', day: DayOfWeek.Thursday, title: 'Project Clink', startTime: new TimeOnly(15, 30), endTime: new TimeOnly(16, 30), description: 'Overlaps with team meeting also', color: '#22c88f' },
-  { id: '5d', day: DayOfWeek.Thursday, title: 'Team Meeting 2', startTime: new TimeOnly(15, 0), endTime: new TimeOnly(16, 0), description: 'Weekly team meeting', color: '#6366f1' },
-  { id: '5e', day: DayOfWeek.Thursday, title: 'Stakeholder Update', startTime: new TimeOnly(15, 10), endTime: new TimeOnly(16, 10), description: 'Another overlap to force +n', color: '#e11d48' },
-  { id: '5f', day: DayOfWeek.Thursday, title: 'QA Sync', startTime: new TimeOnly(15, 20), endTime: new TimeOnly(16, 20), description: 'Another overlap', color: '#0ea5e9' },
+  { id: '55', day: DayOfWeek.Thursday, title: 'Team Meeting', startTime: new TimeOnly(10, 0), endTime: new TimeOnly(11, 0), description: 'Weekly team meeting', style: 'background-color: #6366f1;' },
+  { id: '5', day: DayOfWeek.Thursday, title: 'Team Meeting', startTime: new TimeOnly(15, 0), endTime: new TimeOnly(16, 0), description: 'Weekly team meeting', style: 'background-color: #6366f1;' },
+  { id: '5a', day: DayOfWeek.Thursday, title: 'Quick Update', startTime: new TimeOnly(15, 15), endTime: new TimeOnly(16, 45), description: 'Fully within team meeting', style: 'background-color: #ec4899;' },
+  { id: '5b', day: DayOfWeek.Thursday, title: 'Project Sync', startTime: new TimeOnly(15, 30), endTime: new TimeOnly(16, 30), description: 'Overlaps with team meeting', style: 'background-color: #22c55e;' },
+  { id: '5c', day: DayOfWeek.Thursday, title: 'Project Clink', startTime: new TimeOnly(15, 30), endTime: new TimeOnly(16, 30), description: 'Overlaps with team meeting also', style: 'background-color: #22c88f;' },
+  { id: '5d', day: DayOfWeek.Thursday, title: 'Team Meeting 2', startTime: new TimeOnly(15, 0), endTime: new TimeOnly(16, 0), description: 'Weekly team meeting', style: 'background-color: #6366f1;' },
+  { id: '5e', day: DayOfWeek.Thursday, title: 'Stakeholder Update', startTime: new TimeOnly(15, 10), endTime: new TimeOnly(16, 10), description: 'Another overlap to force +n', style: 'background-color: #e11d48;' },
+  { id: '5f', day: DayOfWeek.Thursday, title: 'QA Sync', startTime: new TimeOnly(15, 20), endTime: new TimeOnly(16, 20), description: 'Another overlap', style: 'background-color: #0ea5e9;' },
 
   // Friday
-  { id: '6', day: DayOfWeek.Friday, title: 'Retro', startTime: new TimeOnly(16, 15), endTime: new TimeOnly(18, 15), description: 'Sprint retrospective', color: '#ec4899' },
+  { id: '6', day: DayOfWeek.Friday, title: 'Retro', startTime: new TimeOnly(16, 15), endTime: new TimeOnly(18, 15), description: 'Sprint retrospective', style: 'background-color: #ec4899;' },
 ];
 
 const container = document.getElementById('schedule-container')!;
@@ -43,6 +43,7 @@ let orientation: ScheduleOrientation = storedOrientation === 'horizontal'
   : ScheduleOrientation.Vertical;
 
 const scheduleResult = WeeklySchedule.create(container, {
+  eventGap: '4px',
   visibleDays: [
     DayOfWeek.Monday,
     DayOfWeek.Tuesday,
@@ -52,7 +53,20 @@ const scheduleResult = WeeklySchedule.create(container, {
   ],
   startHour: 8,
   endHour: 18,
-  orientation
+  orientation,
+  renderEvent: (event, context) => {
+    return `
+      <div class="event-title">${event.title}, ${event.startTime.toString()} - ${event.endTime.toString()}</div>
+      <div class="event-description">${event.description}</div>
+    `;
+  },
+  overflowIndicatorFormat: (overflowEvents) => {
+    if (overflowEvents <= 4) {
+      return `+${overflowEvents} další`;
+    }
+
+    return `+${overflowEvents} dalších`;
+  }
 }, events);
 
 if (!scheduleResult.success) {
