@@ -31,8 +31,9 @@
    color: var(--schedule-header-text-color, $color-text-primary);
    align-items: center;
    justify-content: center;
-   cursor: pointer;
+   cursor: zoom-in;
    padding: 0; // tighter padding for badge look
+   @include hover-border;
  }
 
 

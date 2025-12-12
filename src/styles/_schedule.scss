@@ -44,7 +44,13 @@
   height: 100%;
   overflow: hidden; // overridden per orientation
   display: grid;
+  view-transition-name: schedule-scroll;
+  view-transition-group: contain;
  }
+
+::view-transition-group-children(schedule-scroll) {
+  overflow: hidden;
+}
 
 
 .weekly-schedule.horizontal .schedule-main {
@@ -119,22 +125,17 @@
 
  .zoom-reset-btn {
   appearance: none;
-  border: none;
   background: transparent;
   color: var(--schedule-header-text-color, $color-text-primary);
   font-weight: $font-weight-medium;
-  cursor: pointer;
+  cursor: zoom-out;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
   padding: $spacing-sm;
-  transition: opacity 0.15s ease;
-  
-  &:hover {
-    opacity: 0.7;
-  }
+  @include hover-border;
   
   &:focus-visible {
     outline: 2px solid var(--schedule-primary-color, $color-primary);
@@ -275,16 +276,34 @@
   background: var(--schedule-bg-color, $color-bg-header);
   padding: $spacing-sm $spacing-md;
   flex: 1;
-  cursor: pointer;
+  cursor: zoom-in;
+  position: relative;
+  transition: background-color $transition-fast, text-decoration $transition-fast;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  @include hover-border;
   
   // Horizontal orientation: headers are in vertical axis
   .axis-vertical & {
     height: $day-header-height; // Match header height
   }
+  
+  // Hover and focus states
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background-color: rgba($color-primary, 0.05);
+    text-decoration-color: var(--schedule-primary-color, $color-primary);
+  }
  }
 
   .weekly-schedule.zoomed .day-header.selected {
    background: rgba($color-primary, 0.15);
+  }
+
+  /* Hide icon overlay - no longer using overlay effect */
+  .day-header .day-header-icon {
+    display: none;
   }
 
   /* Zoom hint CTA in intersection cell */
@@ -297,55 +316,6 @@
     line-height: 1.2;
   }
   .zoom-hint-icon { opacity: 0.7; }
-
-  /* Overlay zoom affordance using pseudo-elements */
-  .day-header { position: relative; }
-  .day-header .day-header-label { transition: opacity .12s ease; }
-
-  /* Fade out label when overlay is shown */
-  .weekly-schedule:not(.zoomed) .day-header:hover .day-header-label,
-  .weekly-schedule:not(.zoomed) .day-header:focus-visible .day-header-label,
-  .weekly-schedule.zoomed .day-header:not(.selected):hover .day-header-label,
-  .weekly-schedule.zoomed .day-header:not(.selected):focus-visible .day-header-label,
-  .weekly-schedule.zoomed .day-header.selected:hover .day-header-label,
-  .weekly-schedule.zoomed .day-header.selected:focus-visible .day-header-label {
-    opacity: 0;
-    color: transparent;
-    visibility: hidden;
-  }
-
-  /* Inline icon overlay span centered; replaces ::after content */
-  .day-header .day-header-icon {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1em;
-    color: #fff;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s ease;
-    border-radius: inherit;
-  }
-  /* Backgrounds for overlay */
-  .weekly-schedule:not(.zoomed) .day-header .day-header-icon,
-  .weekly-schedule.zoomed .day-header:not(.selected) .day-header-icon {
-    background: rgba(0,0,0,0.45);
-  }
-  .weekly-schedule.zoomed .day-header.selected .day-header-icon {
-    background: rgba($color-primary, 1);
-  }
-  /* Show overlay on hover/focus */
-  .weekly-schedule:not(.zoomed) .day-header:hover .day-header-icon,
-  .weekly-schedule:not(.zoomed) .day-header:focus-visible .day-header-icon,
-  .weekly-schedule.zoomed .day-header:not(.selected):hover .day-header-icon,
-  .weekly-schedule.zoomed .day-header:not(.selected):focus-visible .day-header-icon,
-  .weekly-schedule.zoomed .day-header.selected:hover .day-header-icon,
-  .weekly-schedule.zoomed .day-header.selected:focus-visible .day-header-icon {
-    display: flex;
-    opacity: 1;
-  }
 
 .zoomed-day-header {
   display: flex;
@@ -368,7 +338,6 @@ $nav-btn-size: 40px;
 
 .nav-btn {
   appearance: none;
-  border: none;
   background: transparent;
   color: var(--schedule-header-text-color, $color-text-primary);
   font-weight: $font-weight-medium;
@@ -382,10 +351,10 @@ $nav-btn-size: 40px;
   font-size: 1.2em;
   min-width: $nav-btn-size;
   min-height: $nav-btn-size;
+  @include hover-border;
   
   &:hover:not(:disabled) {
     background: rgba(0, 0, 0, 0.05);
-    opacity: 0.8;
   }
   
   &:focus-visible {
@@ -584,7 +553,3 @@ $nav-btn-size: 40px;
       var(--schedule-grid-line-color, $color-border) calc(100% / var(--num-rows))
     );
   }
-
-
-
-

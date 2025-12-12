@@ -168,3 +168,18 @@
   z-index: 0;
 }
 
+// Hover border effect for interactive elements
+@mixin hover-border {
+  border: $hover-border-width $hover-border-style transparent;
+  box-sizing: border-box;
+  transition: border-color $transition-fast;
+  
+  &:hover:not(:disabled) {
+    border-color: var(--schedule-primary-color, $color-primary);
+  }
+  
+  &:focus-visible {
+    border-color: var(--schedule-primary-color, $color-primary);
+  }
+}
+
