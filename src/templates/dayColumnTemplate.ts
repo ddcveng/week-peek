@@ -65,7 +65,7 @@ export function createZoomedDayHeaderHTML(
       <button type="button" class="nav-btn nav-btn-prev" data-action="prev-day"${prevDayAttr} aria-label="Previous day"${prevDisabledAttr}>
         ${prevSymbol}
       </button>
-      <div class="day-label-container">
+      <div class="day-label-container" data-action="unzoom" role="button" tabindex="0" aria-label="Back to week">
         <span class="day-header-label">${dayName}</span>
       </div>
       <button type="button" class="nav-btn nav-btn-next" data-action="next-day"${nextDayAttr} aria-label="Next day"${nextDisabledAttr}>

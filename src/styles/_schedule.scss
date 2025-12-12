@@ -385,6 +385,20 @@ $nav-btn-size: 40px;
   justify-content: center;
   min-width: 0;
   min-height: 0;
+  width: 100%;
+  cursor: zoom-out;
+  transition: background-color 0.15s ease;
+  @include hover-border;
+  
+  &:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--schedule-primary-color, $color-primary);
+    outline-offset: -2px;
+    border-radius: 2px;
+  }
   
   .day-header-label {
     font-weight: $font-weight-semibold;
