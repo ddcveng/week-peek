@@ -127,55 +127,65 @@ export class WeeklySchedule {
    * Render the schedule component
    */
   render(): void {
-    const isMobile = this.container.offsetWidth < 768; // Breakpoint for mobile view
-    const orientationClass = this.config.orientation === ScheduleOrientation.Horizontal ? 'horizontal' : 'vertical';
-    const zoomClass = this.zoomedDay !== null ? 'zoomed' : '';
-    const mobileClass = isMobile ? 'mobile' : '';
+    const updateDOM = () => {
+      const isMobile = this.container.offsetWidth < 768; // Breakpoint for mobile view
+      const orientationClass = this.config.orientation === ScheduleOrientation.Horizontal ? 'horizontal' : 'vertical';
+      const zoomClass = this.zoomedDay !== null ? 'zoomed' : '';
+      const mobileClass = isMobile ? 'mobile' : '';
 
-    const axisConfiguration = this.getAxisConfiguration();
-    let styleString = `
-      --num-columns: ${axisConfiguration.numColumns}; 
-      --num-rows: ${axisConfiguration.numRows}; 
-      --header-height: ${axisConfiguration.headerHeight}; 
-      --cross-axis-width: ${axisConfiguration.crossAxisWidth};
-    `;
-    if (this.zoomedDay !== null && this.config.orientation === ScheduleOrientation.Vertical) {
-      styleString += ' --slot-row-height: 64px;';
-    }
+      const axisConfiguration = this.getAxisConfiguration();
+      let styleString = `
+        --num-columns: ${axisConfiguration.numColumns}; 
+        --num-rows: ${axisConfiguration.numRows}; 
+        --header-height: ${axisConfiguration.headerHeight}; 
+        --cross-axis-width: ${axisConfiguration.crossAxisWidth};
+      `;
+      if (this.zoomedDay !== null && this.config.orientation === ScheduleOrientation.Vertical) {
+        styleString += ' --slot-row-height: 64px;';
+      }
 
-    const html = `
-      <div class="weekly-schedule ${orientationClass} ${zoomClass} ${mobileClass} ${this.config.className!}" style="${styleString}">
-        ${isMobile ? this.renderMobileView() : this.renderClassicView()}
-      </div>
-    `;
+      const html = `
+        <div class="weekly-schedule ${orientationClass} ${zoomClass} ${mobileClass} ${this.config.className!}" style="${styleString}">
+          ${isMobile ? this.renderMobileView() : this.renderClassicView()}
+        </div>
+      `;
 
-    this.cleanupHoverListeners();
-    this.container.innerHTML = html;
-    this.attachHoverListenersTimeout = setTimeout(() => {
-      this.attachHoverListeners();
-      this.attachHoverListenersTimeout = null;
-    }, 0);
+      this.cleanupHoverListeners();
+      this.container.innerHTML = html;
+      this.attachHoverListenersTimeout = setTimeout(() => {
+        this.attachHoverListeners();
+        this.attachHoverListenersTimeout = null;
+      }, 0);
 
-    if (!isMobile && this.zoomedDay !== null) {
-      if (this.pendingScrollTargetId) {
-        const targetEl = this.container.querySelector<HTMLElement>(`.events-grid .event[data-event-id="${this.pendingScrollTargetId}"]`);
-        if (targetEl) {
-          setTimeout(() => this.scrollToElementInScroll(targetEl), 0);
-        }
-        this.pendingScrollTargetId = null;
-      } else {
-        const day = this.zoomedDay;
-        const dayEvents = this.events
-          .filter(ev => ev.day === day)
-          .sort((a, b) => a.startTime.toMinutes() - b.startTime.toMinutes());
-        if (dayEvents.length > 0) {
-          const firstId = String(dayEvents[0].id);
-          const firstEl = this.container.querySelector<HTMLElement>(`.events-grid .event[data-event-id="${firstId}"]`);
-          if (firstEl) {
-            setTimeout(() => this.scrollToElementInScroll(firstEl), 0);
+      if (!isMobile && this.zoomedDay !== null) {
+        if (this.pendingScrollTargetId) {
+          const targetEl = this.container.querySelector<HTMLElement>(`.events-grid .event[data-event-id="${this.pendingScrollTargetId}"]`);
+          if (targetEl) {
+            setTimeout(() => this.scrollToElementInScroll(targetEl), 0);
+          }
+          this.pendingScrollTargetId = null;
+        } else {
+          const day = this.zoomedDay;
+          const dayEvents = this.events
+            .filter(ev => ev.day === day)
+            .sort((a, b) => a.startTime.toMinutes() - b.startTime.toMinutes());
+          if (dayEvents.length > 0) {
+            const firstId = String(dayEvents[0].id);
+            const firstEl = this.container.querySelector<HTMLElement>(`.events-grid .event[data-event-id="${firstId}"]`);
+            if (firstEl) {
+              setTimeout(() => this.scrollToElementInScroll(firstEl), 0);
+            }
           }
         }
       }
+    };
+
+    if ('startViewTransition' in document) {
+      document.startViewTransition(() => {
+        updateDOM();
+      });
+    } else {
+      updateDOM();
     }
   }
 
@@ -411,6 +421,9 @@ export class WeeklySchedule {
     // Base grid positioning (integer cell positions)
     const gridStyle = `grid-row: ${layout.gridRowStart} / ${layout.gridRowEnd}; grid-column: ${layout.gridColumnStart} / ${layout.gridColumnEnd};`;
 
+    const safeId = event.id.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const transitionStyle = `view-transition-name: event-${safeId};`;
+
     // Add absolute positioning for fractional offsets
     // Positioning values are calculated in calculateEventPosition based on orientation
     // Both time-based positioning and lane-based positioning are always applied
@@ -447,7 +460,7 @@ export class WeeklySchedule {
       }
     }
 
-    const fullStyle = `${gridStyle} ${positioningStyle}`;
+    const fullStyle = `${gridStyle} ${positioningStyle} ${transitionStyle}`;
 
     if (eventHTML.includes('style="')) {
       return eventHTML.replace(
