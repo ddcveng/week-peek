@@ -265,6 +265,7 @@ export interface ScheduleConfig {
 
   /**
    * Icon configuration (replaces previous separate iconClass + icons fields)
+   * Supports text, emoji, icon font names, or HTML content (e.g., SVG)
    */
   icons?: IconConfig;
 
@@ -361,14 +362,26 @@ export interface AxisConfiguration {
 
 /**
  * Icon configuration object passed through component instead of using globals
+ * 
+ * Icon values can be:
+ * - Text/emoji (e.g., '🔍', '↺')
+ * - Icon font class names (e.g., 'zoom_in' for Material Symbols)
+ * - HTML content (e.g., SVG markup: '<svg>...</svg>')
+ * 
+ * When HTML is provided, it will be inserted directly into the DOM.
+ * Users are responsible for ensuring HTML content is safe and properly formatted.
  */
 export interface IconConfig {
   /** CSS class applied to icon span elements (e.g., material-symbols-outlined) */
   className?: string;
-  /** Icon text for zoom affordance */
+  /** Icon content for zoom affordance - can be text, emoji, icon font name, or HTML (e.g., SVG) */
   zoom?: string;
-  /** Icon text for unzoom affordance */
+  /** Icon content for unzoom affordance - can be text, emoji, icon font name, or HTML (e.g., SVG) */
   unzoom?: string;
-  /** Icon text for intersection CTA hint */
+  /** Icon content for intersection CTA hint - can be text, emoji, icon font name, or HTML (e.g., SVG) */
   cta?: string;
+  /** Icon content for previous day navigation button - can be text, emoji, icon font name, or HTML (e.g., SVG). Defaults to '←' for vertical orientation, '↑' for horizontal */
+  prevDay?: string;
+  /** Icon content for next day navigation button - can be text, emoji, icon font name, or HTML (e.g., SVG). Defaults to '→' for vertical orientation, '↓' for horizontal */
+  nextDay?: string;
 }

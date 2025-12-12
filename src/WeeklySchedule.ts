@@ -12,7 +12,7 @@ import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, TimeOnly, IconCo
 import { validateConfig, validateEvent } from './utils/validators';
 import { calculateEventPosition, groupEventsByDay, assignLanes } from './utils/layoutHelpers';
 import { createTimeLabelHTML, generateTimeSlots } from './templates/timeAxisTemplate';
-import { createDayHeaderHTML } from './templates/dayColumnTemplate';
+import { createDayHeaderHTML, createZoomedDayHeaderHTML } from './templates/dayColumnTemplate';
 import { createEventHTML, createOverflowIndicatorHTML } from './templates/eventTemplate';
 import './styles/main.scss';
 
@@ -264,13 +264,12 @@ export class WeeklySchedule {
   }
 
   private renderIntersection(): string {
-    return ""; // disable intersection area for now
-    // if (this.zoomedDay === null) {
-    //   const iconClass = this.config.icons?.className ? this.config.icons.className : '';
-    //   const ctaIcon = this.config.icons?.cta ?? '🔍';
-    //   return `<div class="zoom-hint" aria-live="polite"><span class="zoom-hint-icon ${iconClass}" aria-hidden="true">${ctaIcon}</span></div>`;
-    // }
-    // return `<button class="zoom-reset-btn" aria-label="Back to week">Back to week</button>`;
+    if (this.zoomedDay === null) {
+      return "";
+    }
+    const iconClass = this.config.icons?.className ? ` ${this.config.icons.className}` : '';
+    const unzoomIcon = this.config.icons?.unzoom ?? '↺';
+    return `<button type="button" class="zoom-reset-btn" data-action="unzoom" aria-label="Back to week" role="button" tabindex="0"><span class="zoom-reset-icon${iconClass}" aria-hidden="true">${unzoomIcon}</span></button>`;
   }
 
   private getAxisConfiguration(): AxisConfiguration {
@@ -278,8 +277,25 @@ export class WeeklySchedule {
     const isHorizontal = this.config.orientation === ScheduleOrientation.Horizontal;
     const timeSlots = generateTimeSlots(this.config.startHour!, this.config.endHour!, this.config.timeSlotInterval!);
 
+    if (this.zoomedDay !== null && !this.originalVisibleDays) {
+      this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
+    }
+    
     const daysForHeader = this.originalVisibleDays || this.config.visibleDays!;
-    const daysHtml = daysForHeader.map(day => createDayHeaderHTML(day, this.config.dayNameTranslations, this.zoomedDay, this.config.icons as IconConfig)).join('');
+    
+    let daysHtml: string;
+    if (this.zoomedDay !== null) {
+      daysHtml = createZoomedDayHeaderHTML(
+        this.zoomedDay,
+        daysForHeader,
+        this.config.dayNameTranslations,
+        this.config.orientation,
+        this.config.icons as IconConfig
+      );
+    } else {
+      daysHtml = daysForHeader.map(day => createDayHeaderHTML(day, this.config.dayNameTranslations, this.zoomedDay, this.config.icons as IconConfig)).join('');
+    }
+    
     const timeSlotsHtml = timeSlots.map(time => createTimeLabelHTML(time)).join('');
 
     if (isHorizontal) {
@@ -507,9 +523,35 @@ export class WeeklySchedule {
     this.container.addEventListener('click', (e: Event) => {
       const target = e.target as HTMLElement;
 
-      const resetBtn = target.closest('.zoom-reset-btn');
-      if (resetBtn) {
+      const unzoomBtn = target.closest('[data-action="unzoom"]');
+      if (unzoomBtn) {
+        e.preventDefault();
+        e.stopPropagation();
         this.resetZoom();
+        return;
+      }
+
+      const prevDayBtn = target.closest('[data-action="prev-day"]');
+      if (prevDayBtn && !prevDayBtn.hasAttribute('disabled')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dayAttr = prevDayBtn.getAttribute('data-day');
+        if (dayAttr) {
+          const day = Number(dayAttr) as DayOfWeek;
+          this.zoomToDay(day);
+        }
+        return;
+      }
+
+      const nextDayBtn = target.closest('[data-action="next-day"]');
+      if (nextDayBtn && !nextDayBtn.hasAttribute('disabled')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dayAttr = nextDayBtn.getAttribute('data-day');
+        if (dayAttr) {
+          const day = Number(dayAttr) as DayOfWeek;
+          this.zoomToDay(day);
+        }
         return;
       }
 
@@ -787,6 +829,10 @@ export class WeeklySchedule {
     if (!this.originalVisibleDays) {
       this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
     }
+    if (this.zoomedDay === day) {
+      return;
+    }
+
     this.zoomedDay = day;
     // Keep full original time range; just restrict visible days
     this.updateConfig({ visibleDays: [day] });

@@ -124,6 +124,26 @@
   color: var(--schedule-header-text-color, $color-text-primary);
   font-weight: $font-weight-medium;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: $spacing-sm;
+  transition: opacity 0.15s ease;
+  
+  &:hover {
+    opacity: 0.7;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--schedule-primary-color, $color-primary);
+    outline-offset: -2px;
+  }
+  
+  .zoom-reset-icon {
+    font-size: 1.2em;
+  }
  }
 
 
@@ -326,6 +346,84 @@
     display: flex;
     opacity: 1;
   }
+
+.zoomed-day-header {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  min-width: 0;
+  min-height: 0;
+}
+
+.weekly-schedule.vertical .axis-horizontal .zoomed-day-header {
+  flex-direction: row;
+}
+
+.weekly-schedule.horizontal .axis-vertical .zoomed-day-header {
+  flex-direction: column;
+}
+
+$nav-btn-size: 40px;
+
+.nav-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--schedule-header-text-color, $color-text-primary);
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: $spacing-sm;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  font-size: 1.2em;
+  min-width: $nav-btn-size;
+  min-height: $nav-btn-size;
+  
+  &:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+    opacity: 0.8;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--schedule-primary-color, $color-primary);
+    outline-offset: -2px;
+  }
+  
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.weekly-schedule.vertical .axis-horizontal .nav-btn {
+  width: $nav-btn-size;
+  height: 100%;
+}
+
+.weekly-schedule.horizontal .axis-vertical .nav-btn {
+  width: 100%;
+  height: $nav-btn-size;
+}
+
+.day-label-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  
+  .day-header-label {
+    font-weight: $font-weight-semibold;
+    font-size: $font-size-sm;
+    color: var(--schedule-header-text-color, $color-text-primary);
+    text-align: center;
+  }
+}
 
 
 /**
