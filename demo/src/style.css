@@ -64,6 +64,7 @@ body {
   border-radius: var(--demo-radius);
   overflow: hidden;
   position: relative;
+  --schedule-primary-color: #888888;
 }
 
 /* Tooltip */

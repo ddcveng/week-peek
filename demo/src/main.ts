@@ -19,7 +19,7 @@ const events = [
   { id: '4', day: DayOfWeek.Wednesday, title: 'Design Review', startTime: new TimeOnly(13, 0), endTime: new TimeOnly(14, 0), description: 'Review new designs', style: 'background-color: #f59e0b;' },
   { id: '4a', day: DayOfWeek.Wednesday, title: 'Design Workshop', startTime: new TimeOnly(12, 30), endTime: new TimeOnly(13, 30), description: 'Overlaps with review', style: 'background-color: #a855f7;' },
   { id: '4b', day: DayOfWeek.Wednesday, title: 'Follow-up', startTime: new TimeOnly(13, 45), endTime: new TimeOnly(14, 30), description: 'Overlaps with review', style: 'background-color: #14b8a6;' },
-
+  { id: '4c', day: DayOfWeek.Wednesday, title: 'Follow-up 2', startTime: new TimeOnly(13, 45), endTime: new TimeOnly(14, 30), description: 'Overlaps with review, but not design workshop', style: 'background-color: #14b8a6;' },
   // Thursday large overlap group to trigger +n more
   { id: '55', day: DayOfWeek.Thursday, title: 'Team Meeting', startTime: new TimeOnly(10, 0), endTime: new TimeOnly(11, 0), description: 'Weekly team meeting', style: 'background-color: #6366f1;' },
   { id: '5', day: DayOfWeek.Thursday, title: 'Team Meeting', startTime: new TimeOnly(15, 0), endTime: new TimeOnly(16, 0), description: 'Weekly team meeting', style: 'background-color: #6366f1;' },
