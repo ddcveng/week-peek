@@ -7,7 +7,7 @@ import type {
   RenderContext
 } from './types';
 import type { Result } from './types/internal';
-import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, TimeOnly, IconConfig, getDayName } from './types';
+import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, TimeOnly, IconConfig, getDayName, TranslationKey } from './types';
 
 import { validateConfig, validateEvent } from './utils/validators';
 import { calculateEventPosition, groupEventsByDay, assignLanes } from './utils/layoutHelpers';
@@ -110,6 +110,7 @@ export class WeeklySchedule {
       renderEvent: config.renderEvent,
       eventGap: config.eventGap,
       overflowIndicatorFormat: config.overflowIndicatorFormat,
+      translations: config.translations,
     } as ScheduleConfig;
 
     this.originalVisibleDays = [...(this.config.visibleDays || WORK_WEEK_DAYS)];
@@ -239,7 +240,8 @@ export class WeeklySchedule {
     const eventsByDay = groupEventsByDay(this.events);
     let dayBlocksHtml = '';
 
-    for (const day of this.config.visibleDays!) {
+    const daysToShow = this.originalVisibleDays || this.config.visibleDays || WORK_WEEK_DAYS;
+    for (const day of daysToShow) {
       const dayEvents = (eventsByDay.get(day) || []).sort((a, b) => a.startTime.toMinutes() - b.startTime.toMinutes());
 
       dayBlocksHtml += `
@@ -258,7 +260,7 @@ export class WeeklySchedule {
                 </div>
               </div>
             `;
-            }).join('') || '<div class="mobile-no-events">No events for this day.</div>'}
+            }).join('') || `<div class="mobile-no-events">${this.config.translations?.[TranslationKey.mobileNoEvents] ?? 'No events for this day.'}</div>`}
           </div>
         </div>
       `;
@@ -268,12 +270,13 @@ export class WeeklySchedule {
   }
 
   private renderIntersection(): string {
-    if (this.zoomedDay === null) {
-      return "";
-    }
-    const iconClass = this.config.icons?.className ? ` ${this.config.icons.className}` : '';
-    const unzoomIcon = this.config.icons?.unzoom ?? '↺';
-    return `<button type="button" class="zoom-reset-btn" data-action="unzoom" aria-label="Back to week" role="button" tabindex="0"><span class="zoom-reset-icon${iconClass}" aria-hidden="true">${unzoomIcon}</span></button>`;
+    return "";
+    // if (this.zoomedDay === null) {
+    //   return "";
+    // }
+    // const iconClass = this.config.icons?.className ? ` ${this.config.icons.className}` : '';
+    // const unzoomIcon = this.config.icons?.unzoom ?? '↺';
+    // return `<button type="button" class="zoom-reset-btn" data-action="unzoom" aria-label="Back to week" role="button" tabindex="0"><span class="zoom-reset-icon${iconClass}" aria-hidden="true">${unzoomIcon}</span></button>`;
   }
 
   private getAxisConfiguration(): AxisConfiguration {
@@ -885,6 +888,7 @@ export class WeeklySchedule {
       renderEvent: mergedConfig.renderEvent,
       eventGap: mergedConfig.eventGap,
       overflowIndicatorFormat: mergedConfig.overflowIndicatorFormat,
+      translations: mergedConfig.translations,
     } as ScheduleConfig;
 
     this.render();

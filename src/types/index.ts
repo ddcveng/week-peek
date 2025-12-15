@@ -280,6 +280,13 @@ export interface ScheduleConfig {
   renderEvent?: (event: ScheduleEvent, context: RenderContext) => string;
 
   overflowIndicatorFormat?: (overflowEvents: number) => string;
+
+  /**
+   * Translations for component text strings
+   * Key-value map where keys are TranslationKey enum values
+   * Example: { [TranslationKey.mobileNoEvents]: 'No hay eventos para este día.' }
+   */
+  translations?: Record<TranslationKey, string>;
 }
 
 /**
@@ -384,4 +391,12 @@ export interface IconConfig {
   prevDay?: string;
   /** Icon content for next day navigation button - can be text, emoji, icon font name, or HTML (e.g., SVG). Defaults to '→' for vertical orientation, '↓' for horizontal */
   nextDay?: string;
+}
+
+/**
+ * Translation keys for component text strings
+ */
+export enum TranslationKey {
+  /** Message displayed when there are no events for a day in mobile view */
+  mobileNoEvents = 'mobileNoEvents'
 }
