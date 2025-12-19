@@ -42,13 +42,8 @@ export class HitTester {
       return { type: 'none', point };
     }
 
-    // Check navigation buttons first (when zoomed)
-    if (this.layout.zoomedDay !== null) {
-      const navButtonHit = this.hitTestNavigationButtons(point);
-      if (navButtonHit) {
-        return navButtonHit;
-      }
-    }
+    // Day headers and navigation buttons are now DOM elements
+    // Skip hit testing for them
 
     // Check events (most common interaction)
     const eventHit = this.hitTestEvents(point);
@@ -57,16 +52,6 @@ export class HitTester {
         type: 'event',
         event: eventHit.event,
         eventLayout: eventHit,
-        point,
-      };
-    }
-
-    // Check day headers
-    const dayHit = this.hitTestDayHeaders(point);
-    if (dayHit) {
-      return {
-        type: 'day-header',
-        day: dayHit.day,
         point,
       };
     }
@@ -116,17 +101,11 @@ export class HitTester {
   }
 
   /**
-   * Hit test day headers
+   * DEPRECATED: Day headers are now DOM elements
+   * Kept for reference only
    */
   private hitTestDayHeaders(point: Point): DayLayout | null {
-    if (!this.layout) return null;
-
-    for (const day of this.layout.days) {
-      if (pointInRect(point, day.headerBounds)) {
-        return day;
-      }
-    }
-
+    // Day headers moved to DOM
     return null;
   }
 
@@ -146,41 +125,11 @@ export class HitTester {
   }
 
   /**
-   * Hit test navigation buttons (prev/next)
+   * DEPRECATED: Navigation buttons are now DOM elements
+   * Kept for reference only
    */
   private hitTestNavigationButtons(point: Point): HitTestResult | null {
-    if (!this.layout || this.layout.zoomedDay === null) return null;
-
-    // Find the zoomed day layout
-    const zoomedDayLayout = this.layout.days.find(d => d.day === this.layout!.zoomedDay);
-    if (!zoomedDayLayout) return null;
-
-    // Check prev button (only if not disabled)
-    if (zoomedDayLayout.prevButtonBounds && pointInRect(point, zoomedDayLayout.prevButtonBounds)) {
-      if (!zoomedDayLayout.prevButtonDisabled) {
-        return {
-          type: 'prev-day-button',
-          day: zoomedDayLayout.day,
-          point,
-        };
-      }
-      // Return 'none' if disabled so it doesn't trigger hover
-      return { type: 'none', point };
-    }
-
-    // Check next button (only if not disabled)
-    if (zoomedDayLayout.nextButtonBounds && pointInRect(point, zoomedDayLayout.nextButtonBounds)) {
-      if (!zoomedDayLayout.nextButtonDisabled) {
-        return {
-          type: 'next-day-button',
-          day: zoomedDayLayout.day,
-          point,
-        };
-      }
-      // Return 'none' if disabled so it doesn't trigger hover
-      return { type: 'none', point };
-    }
-
+    // Navigation buttons moved to DOM
     return null;
   }
 

@@ -270,6 +270,10 @@ export interface CanvasTheme {
   // Interaction colors
   hoverHighlightColor: Color;
   selectionColor: Color;
+  
+  // DOM element colors (for day headers and navigation buttons)
+  textColor?: Color;
+  dayHoverColor?: Color;
 }
 
 /**

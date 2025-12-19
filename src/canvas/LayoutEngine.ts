@@ -139,7 +139,7 @@ export class LayoutEngine {
     const days = this.computeDayLayouts(visibleDays, gridBounds, dayHeaderBounds, orientation, zoomedDay, originalVisibleDays.length > 0 ? originalVisibleDays : (this.config.visibleDays ?? []));
     
     // Calculate time slot layouts
-    const timeSlots = this.computeTimeSlotLayouts(timeSlotCount, gridBounds, timeAxisBounds, orientation);
+    const timeSlots = this.computeTimeSlotLayouts(timeSlotCount, gridBounds, timeAxisBounds, orientation, zoomedDay);
     
     // Calculate event layouts
     const eventLayouts = this.computeEventLayouts(
@@ -181,11 +181,12 @@ export class LayoutEngine {
    * Compute intersection bounds (top-left corner)
    */
   private computeIntersectionBounds(): Rect {
+    // Intersection cell is now in DOM, return zero bounds
     return {
       x: 0,
       y: 0,
-      width: this.dimensions.crossAxisSize,
-      height: this.dimensions.headerSize,
+      width: 0,
+      height: 0,
     };
   }
 
@@ -197,23 +198,13 @@ export class LayoutEngine {
     canvasHeight: number,
     orientation: ScheduleOrientation
   ): Rect {
-    if (orientation === ScheduleOrientation.Vertical) {
-      // Days as columns - header is at top
-      return {
-        x: this.dimensions.crossAxisSize,
-        y: 0,
-        width: canvasWidth - this.dimensions.crossAxisSize,
-        height: this.dimensions.headerSize,
-      };
-    } else {
-      // Days as rows - header is on left
-      return {
-        x: 0,
-        y: this.dimensions.headerSize,
-        width: this.dimensions.crossAxisSize,
-        height: canvasHeight - this.dimensions.headerSize,
-      };
-    }
+    // Day headers are now in DOM, return zero bounds
+    return {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    };
   }
 
   /**
@@ -225,19 +216,19 @@ export class LayoutEngine {
     orientation: ScheduleOrientation
   ): Rect {
     if (orientation === ScheduleOrientation.Vertical) {
-      // Time axis is on left
+      // Time axis is on left, full height (no header)
       return {
         x: 0,
-        y: this.dimensions.headerSize,
+        y: 0,
         width: this.dimensions.crossAxisSize,
-        height: canvasHeight - this.dimensions.headerSize,
+        height: canvasHeight,
       };
     } else {
-      // Time axis is at top
+      // Time axis is at top, full width (no left column for days)
       return {
-        x: this.dimensions.crossAxisSize,
+        x: 0,
         y: 0,
-        width: canvasWidth - this.dimensions.crossAxisSize,
+        width: canvasWidth,
         height: this.dimensions.headerSize,
       };
     }
@@ -252,17 +243,19 @@ export class LayoutEngine {
     orientation: ScheduleOrientation
   ): Rect {
     if (orientation === ScheduleOrientation.Vertical) {
+      // Grid uses full canvas height (time axis stays on left)
       return {
         x: this.dimensions.crossAxisSize,
-        y: this.dimensions.headerSize,
+        y: 0,
         width: canvasWidth - this.dimensions.crossAxisSize,
-        height: canvasHeight - this.dimensions.headerSize,
+        height: canvasHeight,
       };
     } else {
+      // Grid uses full canvas width (no left column for days)
       return {
-        x: this.dimensions.crossAxisSize,
+        x: 0,
         y: this.dimensions.headerSize,
-        width: canvasWidth - this.dimensions.crossAxisSize,
+        width: canvasWidth,
         height: canvasHeight - this.dimensions.headerSize,
       };
     }
@@ -386,7 +379,8 @@ export class LayoutEngine {
     slotCount: number,
     gridBounds: Rect,
     axisBounds: Rect,
-    orientation: ScheduleOrientation
+    orientation: ScheduleOrientation,
+    zoomedDay: DayOfWeek | null = null
   ): TimeSlotLayout[] {
     const startHour = this.config.startHour ?? 9;
     const interval = this.config.timeSlotInterval ?? TimeSlotInterval.SixtyMinutes;
@@ -417,7 +411,10 @@ export class LayoutEngine {
         });
       } else {
         // Time slots as columns
-        const slotWidth = gridBounds.width / slotCount;
+        const baseSlotWidth = gridBounds.width / slotCount;
+        const minSlotWidth = zoomedDay !== null ? this.dimensions.minSlotSize * 2.75 : this.dimensions.minSlotSize;
+        const slotWidth = Math.max(baseSlotWidth, minSlotWidth);
+        // Calculate x position: all slots have the same width, so we can multiply
         const x = gridBounds.x + i * slotWidth;
         
         slots.push({
@@ -537,10 +534,44 @@ export class LayoutEngine {
       return { x: left, y: top, width, height };
     } else {
       // Days as rows, time as columns
-      const slotWidth = content.width / slotCount;
-      const left = content.x + (startSlot + startOffset) * slotWidth;
-      const spanSlots = endSlot - startSlot + endOffset - startOffset;
-      const width = spanSlots * slotWidth;
+      // Use actual time slot positions and widths (which may vary when zoomed)
+      const startSlotLayout = timeSlots[startSlot];
+      const endSlotLayout = timeSlots[Math.min(endSlot, timeSlots.length - 1)];
+      
+      if (!startSlotLayout || !endSlotLayout) {
+        // Fallback to uniform calculation if slots are missing
+        const slotWidth = content.width / slotCount;
+        const left = content.x + (startSlot + startOffset) * slotWidth;
+        const spanSlots = endSlot - startSlot + endOffset - startOffset;
+        const width = spanSlots * slotWidth;
+        
+        const lanePixelHeight = content.height * laneWidth;
+        const top = content.y + content.height * laneStart;
+        const height = lanePixelHeight - (totalLanes > 1 ? this.dimensions.eventGap : 0);
+
+        return { x: left, y: top, width, height };
+      }
+      
+      // Calculate position based on actual slot bounds
+      // Start position: beginning of start slot + offset within that slot
+      const startSlotWidth = startSlotLayout.labelBounds.width;
+      const left = startSlotLayout.labelBounds.x + (startOffset * startSlotWidth);
+      
+      // Calculate width by summing actual slot widths
+      let width = 0;
+      for (let i = startSlot; i <= Math.min(endSlot, timeSlots.length - 1); i++) {
+        const slot = timeSlots[i];
+        if (i === startSlot) {
+          // First slot: use remaining width after offset
+          width += slot.labelBounds.width * (1 - startOffset);
+        } else if (i === endSlot) {
+          // Last slot: use width up to end offset
+          width += slot.labelBounds.width * endOffset;
+        } else {
+          // Middle slots: use full width
+          width += slot.labelBounds.width;
+        }
+      }
       
       const lanePixelHeight = content.height * laneWidth;
       const top = content.y + content.height * laneStart;
