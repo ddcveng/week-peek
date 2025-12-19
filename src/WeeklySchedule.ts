@@ -115,10 +115,12 @@ export class WeeklySchedule {
   private intersectionDiv: HTMLElement;
   private dayHeadersContainer: HTMLElement;
   private dayHeaders: HTMLElement[] = [];
+  private mainContentContainer: HTMLElement;
   private scrollContainer: HTMLElement;
   private contentSizer: HTMLElement;
   private canvasWrapper: HTMLElement;
   private canvas: HTMLCanvasElement;
+  private sidePanel: HTMLElement;
   
   // Configuration
   private config: WeeklyScheduleConfig;
@@ -133,6 +135,7 @@ export class WeeklySchedule {
   private originalVisibleDays: DayOfWeek[];
   private layout: ScheduleLayout | null = null;
   private interactionState: InteractionState;
+  private selectedEvent: ScheduleEvent | null = null;
   
   // Scroll state
   private scrollX: number = 0;
@@ -319,6 +322,18 @@ export class WeeklySchedule {
     this.dayHeaderContainer.appendChild(this.intersectionDiv);
     this.dayHeaderContainer.appendChild(this.dayHeadersContainer);
     
+    // Create main content container (holds canvas scroll area and side panel)
+    this.mainContentContainer = document.createElement('div');
+    this.mainContentContainer.style.cssText = `
+      display: flex;
+      flex-direction: row;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+      min-height: 0;
+    `;
+    
     // Create scroll container - this provides native scrollbars
     this.scrollContainer = document.createElement('div');
     this.scrollContainer.className = 'schedule-scroll-container';
@@ -361,12 +376,28 @@ export class WeeklySchedule {
       pointer-events: auto;
     `;
     
+    // Create side panel (initially hidden)
+    this.sidePanel = document.createElement('div');
+    this.sidePanel.className = 'schedule-side-panel';
+    this.sidePanel.style.cssText = `
+      width: 0;
+      overflow: hidden;
+      transition: width 0.3s ease;
+      background: white;
+      border-left: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    `;
+    
     // Assemble DOM structure
     this.canvasWrapper.appendChild(this.canvas);
     this.contentSizer.appendChild(this.canvasWrapper);
     this.scrollContainer.appendChild(this.contentSizer);
+    this.mainContentContainer.appendChild(this.scrollContainer);
+    this.mainContentContainer.appendChild(this.sidePanel);
     this.container.appendChild(this.dayHeaderContainer);
-    this.container.appendChild(this.scrollContainer);
+    this.container.appendChild(this.mainContentContainer);
 
     // Initialize rendering components
     const theme: Partial<CanvasTheme> = this.config.canvas?.theme ?? {};
@@ -500,6 +531,11 @@ export class WeeklySchedule {
   zoomToDay(day: DayOfWeek): void {
     if (this.zoomedDay === day) return;
     
+    // Close panel if open
+    if (this.selectedEvent !== null) {
+      this.closeSidePanel();
+    }
+    
     // Capture current layout state before transition
     this.captureLayoutSnapshot(true, day);
 
@@ -536,6 +572,11 @@ export class WeeklySchedule {
    */
   resetZoom(): void {
     if (this.zoomedDay === null) return;
+
+    // Close panel if open
+    if (this.selectedEvent !== null) {
+      this.closeSidePanel();
+    }
 
     // Capture current layout state before transition
     this.captureLayoutSnapshot(false, null);
@@ -1141,6 +1182,191 @@ export class WeeklySchedule {
     }
   }
 
+  /**
+   * Render side panel content for the selected event
+   */
+  private renderSidePanel(event: ScheduleEvent): void {
+    this.sidePanel.innerHTML = '';
+    
+    // Header with close button
+    const header = document.createElement('div');
+    header.className = 'schedule-panel-header';
+    header.style.cssText = `
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+    `;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'schedule-panel-close';
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = `
+      background: none;
+      border: none;
+      font-size: 28px;
+      line-height: 1;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    `;
+    closeBtn.addEventListener('mouseenter', () => {
+      closeBtn.style.background = '#f3f4f6';
+      closeBtn.style.color = '#374151';
+    });
+    closeBtn.addEventListener('mouseleave', () => {
+      closeBtn.style.background = 'none';
+      closeBtn.style.color = '#6b7280';
+    });
+    closeBtn.addEventListener('click', () => this.closeSidePanel());
+    header.appendChild(closeBtn);
+    
+    // Event details
+    const details = document.createElement('div');
+    details.className = 'schedule-panel-details';
+    details.style.cssText = `
+      padding: 24px;
+      flex: 1;
+      overflow-y: auto;
+    `;
+    
+    const title = document.createElement('h2');
+    title.style.cssText = `
+      margin: 0 0 16px 0;
+      font-size: 24px;
+      font-weight: 600;
+      color: #111827;
+    `;
+    title.textContent = event.title;
+    
+    const dayInfo = document.createElement('p');
+    dayInfo.className = 'event-day';
+    dayInfo.style.cssText = `
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #6b7280;
+      font-weight: 500;
+    `;
+    dayInfo.textContent = getDayName(event.day, this.config.dayNameTranslations);
+    
+    const timeInfo = document.createElement('p');
+    timeInfo.className = 'event-time';
+    timeInfo.style.cssText = `
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      color: #374151;
+      font-weight: 500;
+    `;
+    timeInfo.textContent = `${event.startTime.toString()} - ${event.endTime.toString()}`;
+    
+    details.appendChild(title);
+    details.appendChild(dayInfo);
+    details.appendChild(timeInfo);
+    
+    if (event.description) {
+      const description = document.createElement('p');
+      description.className = 'event-description';
+      description.style.cssText = `
+        margin: 16px 0 0 0;
+        font-size: 14px;
+        color: #4b5563;
+        line-height: 1.6;
+      `;
+      description.textContent = event.description;
+      details.appendChild(description);
+    }
+    
+    // Sign up button
+    const signUpBtn = document.createElement('button');
+    signUpBtn.className = 'schedule-panel-signup';
+    signUpBtn.textContent = 'Sign up';
+    signUpBtn.style.cssText = `
+      padding: 12px 24px;
+      margin: 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: background-color 0.15s ease;
+    `;
+    signUpBtn.addEventListener('mouseenter', () => {
+      signUpBtn.style.background = '#2563eb';
+    });
+    signUpBtn.addEventListener('mouseleave', () => {
+      signUpBtn.style.background = '#3b82f6';
+    });
+    signUpBtn.addEventListener('click', () => {
+      // Placeholder - can dispatch custom event if needed
+      console.log('Sign up clicked for event:', event.id);
+      this.dispatchEvent('schedule-event-signup', { event });
+    });
+    
+    this.sidePanel.appendChild(header);
+    this.sidePanel.appendChild(details);
+    this.sidePanel.appendChild(signUpBtn);
+  }
+
+  /**
+   * Open side panel to display event details
+   */
+  private openSidePanel(event: ScheduleEvent): void {
+    this.selectedEvent = event;
+    this.renderSidePanel(event);
+    
+    // Calculate 30% width based on mainContentContainer
+    const containerWidth = this.mainContentContainer.clientWidth;
+    const panelWidth = Math.floor(containerWidth * 0.3);
+    const canvasWidth = containerWidth - panelWidth;
+    
+    // Update widths with transition
+    this.scrollContainer.style.width = `${canvasWidth}px`;
+    this.scrollContainer.style.flex = '0 0 auto';
+    this.sidePanel.style.width = `${panelWidth}px`;
+    
+    // Trigger canvas resize after the transition completes
+    setTimeout(() => {
+      this.calculateContentSize();
+      this.renderer.resize(this.contentWidth, this.contentHeight);
+      this.invalidateLayout();
+      this.renderFrame();
+    }, 300); // Match transition duration
+  }
+
+  /**
+   * Close side panel
+   */
+  private closeSidePanel(): void {
+    this.selectedEvent = null;
+    this.sidePanel.style.width = '0';
+    this.scrollContainer.style.width = '100%';
+    this.scrollContainer.style.flex = '1';
+    
+    // Clear content after animation completes
+    setTimeout(() => {
+      if (this.selectedEvent === null) {
+        this.sidePanel.innerHTML = '';
+      }
+    }, 300); // Match transition duration
+    
+    // Trigger canvas resize after the transition completes
+    setTimeout(() => {
+      this.calculateContentSize();
+      this.renderer.resize(this.contentWidth, this.contentHeight);
+      this.invalidateLayout();
+      this.renderFrame();
+    }, 300);
+  }
+
   private renderFrame(): void {
     this.computeLayout();
     if (!this.layout) return;
@@ -1570,13 +1796,13 @@ export class WeeklySchedule {
           const day = hitResult.event!.day;
           this.zoomToDay(day);
         } else if (hitResult.event) {
-          // In normal mode, zoom to the event's day; in zoomed mode, dispatch click event
+          // In normal mode, zoom to the event's day; in zoomed mode, open side panel
           if (this.zoomedDay === null) {
             // Normal mode: zoom to the day containing this event
             this.zoomToDay(hitResult.event.day);
           } else {
-            // Zoomed mode: dispatch click event for custom handling
-            this.dispatchEvent('schedule-event-click', { event: hitResult.event });
+            // Zoomed mode: open side panel to display event details
+            this.openSidePanel(hitResult.event);
           }
         }
         break;
@@ -1684,13 +1910,13 @@ export class WeeklySchedule {
         if (hitResult.eventLayout?.isOverflow) {
           this.zoomToDay(hitResult.event!.day);
         } else if (hitResult.event) {
-          // In normal mode, zoom to the event's day; in zoomed mode, dispatch click event
+          // In normal mode, zoom to the event's day; in zoomed mode, open side panel
           if (this.zoomedDay === null) {
             // Normal mode: zoom to the day containing this event
             this.zoomToDay(hitResult.event.day);
           } else {
-            // Zoomed mode: dispatch click event for custom handling
-            this.dispatchEvent('schedule-event-click', { event: hitResult.event });
+            // Zoomed mode: open side panel to display event details
+            this.openSidePanel(hitResult.event);
           }
         }
         break;

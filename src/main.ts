@@ -113,6 +113,14 @@ scheduleContainer.addEventListener('schedule-event-click', ((e: Event) => {
   alert(`Clicked: ${event.title}\nTime: ${event.startTime.toString()} - ${event.endTime.toString()}`);
 }) as EventListener);
 
+// Listen for sign-up button clicks
+scheduleContainer.addEventListener('schedule-event-signup', ((e: Event) => {
+  const customEvent = e as CustomEvent<{ event: ScheduleEvent }>;
+  const event = customEvent.detail.event;
+  console.log('Sign up clicked for event:', event);
+  alert(`Signed up for: ${event.title}\nTime: ${event.startTime.toString()} - ${event.endTime.toString()}`);
+}) as EventListener);
+
 if (!result.success) {
   console.error('Failed to create schedule:', result.error);
   alert(`Error creating schedule: ${result.error.message}`);
