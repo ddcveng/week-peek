@@ -337,6 +337,7 @@ export function renderEventDragPreview(
   renderer.restore();
 }
 
+// Drag n Drop is not something we need @ddcveng
 /**
  * Render drop zone highlight
  */

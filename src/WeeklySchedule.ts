@@ -4,7 +4,7 @@ import type {
   DayOfWeek,
 } from './types';
 import type { Result } from './types/internal';
-import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation } from './types';
+import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, getDayName } from './types';
 
 import { validateConfig, validateEvent } from './utils/validators';
 import { groupEventsByDay, assignLanes } from './utils/layoutHelpers';
@@ -111,6 +111,10 @@ export interface WeeklyScheduleConfig extends ScheduleConfig {
 export class WeeklySchedule {
   // DOM elements
   private container: HTMLElement;
+  private dayHeaderContainer: HTMLElement;
+  private intersectionDiv: HTMLElement;
+  private dayHeadersContainer: HTMLElement;
+  private dayHeaders: HTMLElement[] = [];
   private scrollContainer: HTMLElement;
   private contentSizer: HTMLElement;
   private canvasWrapper: HTMLElement;
@@ -264,27 +268,77 @@ export class WeeklySchedule {
       cursor: 'default',
     };
 
-    // Set up container with scrollable structure
+    // Set up container with hybrid DOM-canvas structure
     this.container.style.position = 'relative';
     this.container.style.overflow = 'hidden';
+    this.container.style.display = 'flex';
+    this.container.style.maxWidth = '100%';
+    this.container.style.maxHeight = '100%';
+    this.container.style.boxSizing = 'border-box';
     this.container.innerHTML = '';
+    
+    const isVertical = this.config.orientation === ScheduleOrientation.Vertical;
+    const dims = { crossAxisSize: 80, headerSize: 40 };  // Will be properly set after layoutEngine initialization
+    const canvasTheme = this.config.canvas?.theme;
+    
+    // Update container flex direction based on orientation
+    this.container.style.flexDirection = isVertical ? 'column' : 'row';
+    
+    // Create day header container (fixed, non-scrolling)
+    this.dayHeaderContainer = document.createElement('div');
+    this.dayHeaderContainer.className = 'schedule-day-header-container';
+    this.dayHeaderContainer.style.cssText = `
+      display: flex;
+      flex-direction: ${isVertical ? 'row' : 'column'};
+      ${isVertical ? `height: ${dims.headerSize}px;` : `width: ${dims.crossAxisSize}px;`}
+      background: ${canvasTheme?.headerBackgroundColor ?? '#f3f4f6'};
+      border-bottom: ${isVertical ? '1px' : '0'} solid ${canvasTheme?.gridLineMajorColor ?? '#d1d5db'};
+      border-right: ${isVertical ? '0' : '1px'} solid ${canvasTheme?.gridLineMajorColor ?? '#d1d5db'};
+      flex-shrink: 0;
+    `;
+    
+    // Create intersection cell (top-left corner)
+    this.intersectionDiv = document.createElement('div');
+    this.intersectionDiv.className = 'schedule-intersection';
+    this.intersectionDiv.style.cssText = `
+      ${isVertical ? `width: ${dims.crossAxisSize}px;` : `height: ${dims.headerSize}px;`}
+      background: ${canvasTheme?.headerBackgroundColor ?? '#f3f4f6'};
+      border-${isVertical ? 'right' : 'bottom'}: 1px solid ${canvasTheme?.gridLineColor ?? '#e5e7eb'};
+      flex-shrink: 0;
+    `;
+    
+    // Create day headers container
+    this.dayHeadersContainer = document.createElement('div');
+    this.dayHeadersContainer.className = 'schedule-day-headers';
+    this.dayHeadersContainer.style.cssText = `
+      display: flex;
+      flex-direction: ${isVertical ? 'row' : 'column'};
+      flex: 1;
+    `;
+    
+    this.dayHeaderContainer.appendChild(this.intersectionDiv);
+    this.dayHeaderContainer.appendChild(this.dayHeadersContainer);
     
     // Create scroll container - this provides native scrollbars
     this.scrollContainer = document.createElement('div');
+    this.scrollContainer.className = 'schedule-scroll-container';
+    // Initially set overflow to hidden - will be updated when zoomed
     this.scrollContainer.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      overflow-x: auto;
+      flex: 1;
+      position: relative;
+      overflow-x: hidden;
       overflow-y: hidden;
+      min-width: 0;
+      min-height: 0;
+      max-width: 100%;
+      max-height: 100%;
     `;
     
     // Create content sizer - this defines the scrollable area size
     this.contentSizer = document.createElement('div');
     this.contentSizer.style.cssText = `
       position: relative;
+      box-sizing: border-box;
     `;
     
     // Create canvas wrapper - contains the canvas at content size
@@ -311,6 +365,7 @@ export class WeeklySchedule {
     this.canvasWrapper.appendChild(this.canvas);
     this.contentSizer.appendChild(this.canvasWrapper);
     this.scrollContainer.appendChild(this.contentSizer);
+    this.container.appendChild(this.dayHeaderContainer);
     this.container.appendChild(this.scrollContainer);
 
     // Initialize rendering components
@@ -422,6 +477,24 @@ export class WeeklySchedule {
   }
 
   /**
+   * Update scrollContainer overflow based on zoom state and orientation
+   */
+  private updateScrollContainerOverflow(): void {
+    const isVertical = this.config.orientation === ScheduleOrientation.Vertical;
+    const isZoomed = this.zoomedDay !== null;
+    
+    if (isZoomed) {
+      // When zoomed, enable scrolling in the appropriate direction
+      this.scrollContainer.style.overflowX = isVertical ? 'hidden' : 'auto';
+      this.scrollContainer.style.overflowY = isVertical ? 'auto' : 'hidden';
+    } else {
+      // In normal week view, hide scrollbars to prevent space reservation
+      this.scrollContainer.style.overflowX = 'hidden';
+      this.scrollContainer.style.overflowY = 'hidden';
+    }
+  }
+
+  /**
    * Zoom to a specific day with animated transition
    */
   zoomToDay(day: DayOfWeek): void {
@@ -434,6 +507,13 @@ export class WeeklySchedule {
     this.config.visibleDays = [day];
     this.layoutEngine.updateConfig({ visibleDays: [day] });
     
+    // Update scroll container overflow for zoomed state
+    this.updateScrollContainerOverflow();
+    
+    // Recalculate content size for new zoom state (affects horizontal scrolling in horizontal mode)
+    this.calculateContentSize();
+    this.renderer.resize(this.contentWidth, this.contentHeight);
+    
     // Compute new layout for the transition target
     this.invalidateLayout();
     this.computeLayout();
@@ -441,6 +521,12 @@ export class WeeklySchedule {
     if (this.zoomTransition && this.layout) {
       this.zoomTransition.toLayout = this.layout;
     }
+    
+    // Update DOM day headers for new zoom state
+    this.renderDayHeadersDOM();
+    
+    // Immediately render to avoid black flash after canvas resize
+    this.renderFrame();
     
     this.dispatchEvent('schedule-day-zoom', { day });
   }
@@ -458,6 +544,13 @@ export class WeeklySchedule {
     this.config.visibleDays = [...this.originalVisibleDays];
     this.layoutEngine.updateConfig({ visibleDays: this.originalVisibleDays });
     
+    // Update scroll container overflow for unzoomed state
+    this.updateScrollContainerOverflow();
+    
+    // Recalculate content size for unzoomed state
+    this.calculateContentSize();
+    this.renderer.resize(this.contentWidth, this.contentHeight);
+    
     // Compute new layout for the transition target
     this.invalidateLayout();
     this.computeLayout();
@@ -465,6 +558,12 @@ export class WeeklySchedule {
     if (this.zoomTransition && this.layout) {
       this.zoomTransition.toLayout = this.layout;
     }
+    
+    // Update DOM day headers for unzoomed state
+    this.renderDayHeadersDOM();
+    
+    // Immediately render to avoid black flash after canvas resize
+    this.renderFrame();
     
     this.dispatchEvent('schedule-zoom-reset', {});
   }
@@ -894,6 +993,154 @@ export class WeeklySchedule {
   /**
    * Render a single frame
    */
+  /**
+   * Render day headers as DOM elements
+   */
+  private renderDayHeadersDOM(): void {
+    const visibleDays = this.zoomedDay ? [this.zoomedDay] : (this.config.visibleDays ?? []);
+    const theme = this.renderer.getTheme();
+    
+    // Clear existing headers
+    this.dayHeadersContainer.innerHTML = '';
+    this.dayHeaders = [];
+    
+    for (const day of visibleDays) {
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'schedule-day-header';
+      headerDiv.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        background: ${theme.headerBackgroundColor ?? '#f3f4f6'};
+        position: relative;
+        user-select: none;
+      `;
+      
+      // Add navigation buttons if zoomed
+      if (this.zoomedDay === day) {
+        const currentIndex = this.originalVisibleDays.indexOf(day);
+        const prevDisabled = currentIndex <= 0;
+        
+        // Create prev button
+        const prevButton = document.createElement('button');
+        prevButton.className = 'schedule-nav-button schedule-nav-button-prev';
+        prevButton.disabled = prevDisabled;
+        prevButton.style.cssText = `
+          height: 40px;
+          width: 100%;
+          border: none;
+          background: ${theme.headerBackgroundColor ?? '#f3f4f6'};
+          cursor: ${prevDisabled ? 'default' : 'pointer'};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          color: ${prevDisabled ? (theme.gridLineColor ?? '#e5e7eb') : (theme.textColor ?? '#374151')};
+          border-bottom: 1px solid ${theme.gridLineColor ?? '#e5e7eb'};
+          transition: background-color 0.15s ease;
+        `;
+        prevButton.textContent = this.config.icons?.prevDay ?? '↑';
+        
+        if (!prevDisabled) {
+          prevButton.addEventListener('mouseenter', () => {
+            prevButton.style.background = theme.dayHoverColor ?? '#e5e7eb';
+          });
+          prevButton.addEventListener('mouseleave', () => {
+            prevButton.style.background = theme.headerBackgroundColor ?? '#f3f4f6';
+          });
+          prevButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentIndex > 0) {
+              this.zoomToDay(this.originalVisibleDays[currentIndex - 1]);
+            }
+          });
+        }
+        
+        headerDiv.appendChild(prevButton);
+      }
+      
+      // Add day label
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'schedule-day-label';
+      labelDiv.style.cssText = `
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 500;
+        font-size: 14px;
+        color: ${theme.textColor ?? '#374151'};
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      `;
+      labelDiv.textContent = getDayName(day, this.config.dayNameTranslations);
+      
+      // Add hover and click handlers
+      labelDiv.addEventListener('mouseenter', () => {
+        labelDiv.style.background = theme.dayHoverColor ?? '#e5e7eb';
+      });
+      labelDiv.addEventListener('mouseleave', () => {
+        labelDiv.style.background = 'transparent';
+      });
+      labelDiv.addEventListener('click', () => {
+        if (this.zoomedDay !== null) {
+          // When zoomed, clicking the day label unzooms
+          this.resetZoom();
+        } else {
+          // When not zoomed, clicking zooms to that day
+          this.zoomToDay(day);
+        }
+      });
+      
+      headerDiv.appendChild(labelDiv);
+      
+      // Add next button if zoomed
+      if (this.zoomedDay === day) {
+        const currentIndex = this.originalVisibleDays.indexOf(day);
+        const nextDisabled = currentIndex >= this.originalVisibleDays.length - 1;
+        
+        const nextButton = document.createElement('button');
+        nextButton.className = 'schedule-nav-button schedule-nav-button-next';
+        nextButton.disabled = nextDisabled;
+        nextButton.style.cssText = `
+          height: 40px;
+          width: 100%;
+          border: none;
+          background: ${theme.headerBackgroundColor ?? '#f3f4f6'};
+          cursor: ${nextDisabled ? 'default' : 'pointer'};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          color: ${nextDisabled ? (theme.gridLineColor ?? '#e5e7eb') : (theme.textColor ?? '#374151')};
+          border-top: 1px solid ${theme.gridLineColor ?? '#e5e7eb'};
+          transition: background-color 0.15s ease;
+        `;
+        nextButton.textContent = this.config.icons?.nextDay ?? '↓';
+        
+        if (!nextDisabled) {
+          nextButton.addEventListener('mouseenter', () => {
+            nextButton.style.background = theme.dayHoverColor ?? '#e5e7eb';
+          });
+          nextButton.addEventListener('mouseleave', () => {
+            nextButton.style.background = theme.headerBackgroundColor ?? '#f3f4f6';
+          });
+          nextButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentIndex < this.originalVisibleDays.length - 1) {
+              this.zoomToDay(this.originalVisibleDays[currentIndex + 1]);
+            }
+          });
+        }
+        
+        headerDiv.appendChild(nextButton);
+      }
+      
+      this.dayHeaders.push(headerDiv);
+      this.dayHeadersContainer.appendChild(headerDiv);
+    }
+  }
+
   private renderFrame(): void {
     this.computeLayout();
     if (!this.layout) return;
@@ -916,33 +1163,8 @@ export class WeeklySchedule {
       renderNowIndicator(this.renderer, this.layout);
     }
 
-    // Render hover highlight for day header
-    if (this.interactionState.hoveredDay !== null) {
-      const dayLayout = this.layout.days.find(d => d.day === this.interactionState.hoveredDay);
-      if (dayLayout) {
-        this.gridRenderer.renderDayHoverHighlight(dayLayout, this.renderer.getTheme());
-      }
-    }
-
-    // Render hover highlight for navigation buttons (only if not disabled)
-    const zoomedDay = this.layout.zoomedDay;
-    if (this.interactionState.hoveredNavButton !== null && zoomedDay !== null) {
-      const zoomedDayLayout = this.layout.days.find(d => d.day === zoomedDay);
-      if (zoomedDayLayout) {
-        const isDisabled = this.interactionState.hoveredNavButton === 'prev' 
-          ? (zoomedDayLayout.prevButtonDisabled ?? false)
-          : (zoomedDayLayout.nextButtonDisabled ?? false);
-        // Only render hover if button is not disabled
-        if (!isDisabled) {
-          this.gridRenderer.renderNavigationButtonHover(
-            zoomedDayLayout,
-            this.interactionState.hoveredNavButton,
-            this.renderer.getTheme(),
-            this.layout.orientation
-          );
-        }
-      }
-    }
+    // Day headers and navigation buttons are now in DOM
+    // No need to render hover highlights on canvas
   }
 
   /**
@@ -1153,6 +1375,9 @@ export class WeeklySchedule {
       // Resize canvas to content size (not viewport size)
       this.renderer.resize(this.contentWidth, this.contentHeight);
       
+      // Update DOM day headers
+      this.renderDayHeadersDOM();
+      
       this.invalidateLayout();
       this.renderFrame();
       this.resizeTimeout = null;
@@ -1174,13 +1399,21 @@ export class WeeklySchedule {
    * Uses container dimensions (stable) rather than scrollContainer (affected by scrollbar)
    */
   private calculateContentSize(): void {
-    // Use container dimensions - these are stable and not affected by scrollbar presence
-    const viewportWidth = this.container.clientWidth;
-    const viewportHeight = this.container.clientHeight;
-    
-    // Get dimensions from layout
-    const dims = this.layoutEngine.getDimensions();
+    // Use scrollContainer dimensions directly - this is the actual viewport for the canvas
+    // The scrollContainer is already sized correctly by flexbox (container minus day header)
     const isVertical = this.config.orientation === ScheduleOrientation.Vertical;
+    const dims = this.layoutEngine.getDimensions();
+    
+    // Get the actual available viewport from scrollContainer
+    // Use Math.floor to avoid rounding issues that cause 1-2px overflow
+    let viewportWidth = Math.floor(this.scrollContainer.clientWidth);
+    let viewportHeight = Math.floor(this.scrollContainer.clientHeight);
+    
+    // Ensure we have valid dimensions
+    viewportWidth = Math.max(0, viewportWidth);
+    viewportHeight = Math.max(0, viewportHeight);
+    
+    // Get dimensions from layout (already retrieved above)
     const numDays = this.zoomedDay !== null ? 1 : (this.config.visibleDays?.length ?? 5);
     
     // Height always fits viewport (no vertical scroll)
@@ -1190,21 +1423,45 @@ export class WeeklySchedule {
     
     if (isVertical) {
       // Vertical: days are columns, time is rows
-      // Calculate minimum width for all day columns
+      // Calculate minimum width for all day columns plus time axis
       minWidth = dims.crossAxisSize + (numDays * dims.minDayColumnWidth);
     } else {
       // Horizontal: time is columns, days are rows  
-      // Calculate minimum width for all time slots
-      const numHours = (this.config.endHour ?? 17) - (this.config.startHour ?? 9);
-      minWidth = dims.crossAxisSize + (numHours * dims.minSlotSize);
+      // In normal (unzoomed) mode, let slots fit the viewport (no minimum enforced)
+      // Only when zoomed, enforce larger minimum slot size to trigger scrolling
+      if (this.zoomedDay !== null) {
+        // Use actual slot count calculation (same as LayoutEngine.getTimeSlotCount)
+        const startHour = this.config.startHour ?? 9;
+        const endHour = this.config.endHour ?? 17;
+        const interval = this.config.timeSlotInterval ?? TimeSlotInterval.SixtyMinutes;
+        const slotCount = Math.ceil((endHour - startHour) * 60 / interval);
+        const effectiveMinSlotSize = dims.minSlotSize * 2.75;
+        minWidth = slotCount * effectiveMinSlotSize;
+      }
+      // When not zoomed, minWidth stays 0 - slots will fit viewport
     }
     
-    this.contentWidth = Math.max(viewportWidth, minWidth);
+    // Only enforce minimum width when zoomed (or in vertical mode with narrow viewport)
+    // In normal horizontal mode, contentWidth = viewportWidth exactly (no scrollbar)
+    if (minWidth > 0) {
+      // Zoomed mode: allow content to exceed viewport to trigger scrolling
+      this.contentWidth = Math.max(viewportWidth, minWidth);
+    } else {
+      // Normal mode: ensure exact match to prevent any overflow
+      this.contentWidth = viewportWidth;
+    }
     
     // Update sizing styles
-    this.contentSizer.style.width = '100%';
-    this.contentSizer.style.minWidth = `${minWidth}px`;
-    this.contentSizer.style.height = `${this.contentHeight}px`;
+    // Always set explicit pixel dimensions for canvas rendering
+    // Use Math.floor to ensure no fractional pixels that could cause overflow
+    const finalWidth = Math.floor(this.contentWidth);
+    const finalHeight = Math.floor(this.contentHeight);
+    
+    this.contentSizer.style.width = `${finalWidth}px`;
+    this.contentSizer.style.minWidth = minWidth > 0 ? `${Math.floor(minWidth)}px` : '0';
+    this.contentSizer.style.height = `${finalHeight}px`;
+    this.contentSizer.style.maxWidth = `${finalWidth}px`;
+    this.contentSizer.style.maxHeight = `${finalHeight}px`;
   }
 
   /**
@@ -1249,7 +1506,7 @@ export class WeeklySchedule {
     const hitResult = this.hitTester.hitTest(adjustedPoint);
     this.updateHoverState(hitResult);
     this.updateCursor(hitResult);
-    this.updateNavigationButtonHover(hitResult);
+    // Navigation button hover is handled by DOM
     this.scheduleRender();
   }
 
@@ -1275,8 +1532,7 @@ export class WeeklySchedule {
     }
     
     this.interactionState.hoveredEvent = null;
-    this.interactionState.hoveredDay = null;
-    this.interactionState.hoveredNavButton = null;
+    // hoveredDay and hoveredNavButton are now handled by DOM
     this.canvas.style.cursor = 'default';
     this.scheduleRender();
   }
@@ -1425,15 +1681,8 @@ export class WeeklySchedule {
         }
         break;
         
-      case 'day-header':
-        if (hitResult.day !== undefined) {
-          if (this.zoomedDay === hitResult.day) {
-            this.resetZoom();
-          } else {
-            this.zoomToDay(hitResult.day);
-          }
-        }
-        break;
+      // Day headers and navigation buttons are now DOM elements
+      // Click handling is done via DOM event listeners
     }
   }
 
@@ -1466,8 +1715,7 @@ export class WeeklySchedule {
       }
     }
 
-    // Handle day header hover
-    this.interactionState.hoveredDay = hitResult.type === 'day-header' ? hitResult.day ?? null : null;
+    // Day header hover is now handled by DOM
   }
 
   /**
@@ -1487,17 +1735,6 @@ export class WeeklySchedule {
   }
 
   /**
-   * Update navigation button hover state
-   */
-  private updateNavigationButtonHover(hitResult: HitTestResult): void {
-    if (hitResult.type === 'prev-day-button' || hitResult.type === 'next-day-button') {
-      this.interactionState.hoveredNavButton = hitResult.type === 'prev-day-button' ? 'prev' : 'next';
-    } else {
-      this.interactionState.hoveredNavButton = null;
-    }
-  }
-
-  /**
    * Update cursor based on hit result
    */
   private updateCursor(hitResult: HitTestResult): void {
@@ -1505,11 +1742,10 @@ export class WeeklySchedule {
 
     switch (hitResult.type) {
       case 'event':
-      case 'day-header':
-      case 'prev-day-button':
-      case 'next-day-button':
         cursor = 'pointer';
         break;
+      // Day headers and navigation buttons are now DOM elements
+      // Cursor handling is done via CSS
     }
 
     if (this.canvas.style.cursor !== cursor) {
