@@ -17,7 +17,7 @@ const events = [
     startTime: new TimeOnly(10, 0), 
     endTime: new TimeOnly(11, 0), 
     description: 'Daily team sync', 
-    style: 'background-color: #3b82f6;',
+    color: '#3b82f6',
     icon: { type: 'font', content: 'groups', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -27,7 +27,7 @@ const events = [
     startTime: new TimeOnly(10, 30), 
     endTime: new TimeOnly(11, 30), 
     description: 'Overlaps with standup', 
-    style: 'background-color: #ef4444;',
+    color: '#ef4444',
     icon: { type: 'font', content: 'phone', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -37,7 +37,7 @@ const events = [
     startTime: new TimeOnly(14, 0), 
     endTime: new TimeOnly(16, 0), 
     description: 'Plan next sprint', 
-    style: 'background-color: #8b5cf6;',
+    color: '#8b5cf6',
     icon: { type: 'font', content: 'event_note', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -47,7 +47,7 @@ const events = [
     startTime: new TimeOnly(15, 0), 
     endTime: new TimeOnly(17, 0), 
     description: 'Overlaps with sprint planning', 
-    style: 'background-color: #06b6d4;',
+    color: '#06b6d4',
     icon: { type: 'font', content: 'code', fontFamily: 'material-symbols-outlined' } as const
   },
 
@@ -59,7 +59,7 @@ const events = [
     startTime: new TimeOnly(11, 0), 
     endTime: new TimeOnly(12, 0), 
     description: 'Team member check-in', 
-    style: 'background-color: #10b981;',
+    color: '#10b981',
     icon: { type: 'font', content: 'person', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -69,7 +69,7 @@ const events = [
     startTime: new TimeOnly(10, 45), 
     endTime: new TimeOnly(11, 30), 
     description: 'Overlaps with 1-on-1', 
-    style: 'background-color: #f97316;',
+    color: '#f97316',
     // Testing URL icon - using a simple SVG data URL
     icon: { type: 'url', url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnptLTIgMTVsLTUtNSAxLjQxLTEuNDFMMTAgMTQuMTdsNy41OS03LjU5TDE5IDhsLTkgOXoiIGZpbGw9IiNmZmZmZmYiLz48L3N2Zz4=' } as const
   },
@@ -80,7 +80,7 @@ const events = [
     startTime: new TimeOnly(11, 30), 
     endTime: new TimeOnly(12, 30), 
     description: 'Overlaps with 1-on-1', 
-    style: 'background-color: #84cc16;',
+    color: '#84cc16',
     // Testing URL icon with SVG file
     icon: { type: 'url', url: '/week-peek/chef-man-cap-svgrepo-com.svg' } as const
   },
@@ -93,7 +93,7 @@ const events = [
     startTime: new TimeOnly(13, 0), 
     endTime: new TimeOnly(14, 0), 
     description: 'Review new designs', 
-    style: 'background-color: #f59e0b;',
+    color: '#f59e0b',
     icon: { type: 'font', content: 'palette', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -103,7 +103,7 @@ const events = [
     startTime: new TimeOnly(12, 30), 
     endTime: new TimeOnly(13, 30), 
     description: 'Overlaps with review', 
-    style: 'background-color: #a855f7;',
+    color: '#a855f7',
     icon: { type: 'font', content: 'brush', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -113,7 +113,7 @@ const events = [
     startTime: new TimeOnly(13, 45), 
     endTime: new TimeOnly(14, 30), 
     description: 'Overlaps with review', 
-    style: 'background-color: #14b8a6;',
+    color: '#14b8a6',
     icon: { type: 'font', content: 'reply', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -123,7 +123,7 @@ const events = [
     startTime: new TimeOnly(13, 45), 
     endTime: new TimeOnly(14, 30), 
     description: 'Overlaps with review, but not design workshop', 
-    style: 'background-color: #14b8a6;',
+    color: '#14b8a6',
     // Testing preloaded image icon type
     icon: { type: 'image', image: testImage } as const
   },
@@ -135,7 +135,7 @@ const events = [
     startTime: new TimeOnly(10, 0), 
     endTime: new TimeOnly(11, 0), 
     description: 'Weekly team meeting', 
-    style: 'background-color: #6366f1;',
+    color: '#6366f1',
     icon: { type: 'font', content: 'groups', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -145,7 +145,7 @@ const events = [
     startTime: new TimeOnly(15, 0), 
     endTime: new TimeOnly(16, 0), 
     description: 'Weekly team meeting', 
-    style: 'background-color: #6366f1;',
+    color: '#6366f1',
     icon: { type: 'font', content: 'groups', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -155,7 +155,7 @@ const events = [
     startTime: new TimeOnly(15, 15), 
     endTime: new TimeOnly(16, 45), 
     description: 'Fully within team meeting', 
-    style: 'background-color: #ec4899;',
+    color: '#ec4899',
     icon: { type: 'font', content: 'update', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -165,7 +165,7 @@ const events = [
     startTime: new TimeOnly(15, 30), 
     endTime: new TimeOnly(16, 30), 
     description: 'Overlaps with team meeting', 
-    style: 'background-color: #22c55e;',
+    color: '#22c55e',
     icon: { type: 'font', content: 'sync', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -175,7 +175,7 @@ const events = [
     startTime: new TimeOnly(15, 30), 
     endTime: new TimeOnly(16, 30), 
     description: 'Overlaps with team meeting also', 
-    style: 'background-color: #22c88f;',
+    color: '#22c88f',
     icon: { type: 'font', content: 'link', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -185,7 +185,7 @@ const events = [
     startTime: new TimeOnly(15, 0), 
     endTime: new TimeOnly(16, 0), 
     description: 'Weekly team meeting', 
-    style: 'background-color: #6366f1;',
+    color: '#6366f1',
     icon: { type: 'font', content: 'groups', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -195,7 +195,7 @@ const events = [
     startTime: new TimeOnly(15, 10), 
     endTime: new TimeOnly(16, 10), 
     description: 'Another overlap to force +n', 
-    style: 'background-color: #e11d48;',
+    color: '#e11d48',
     icon: { type: 'font', content: 'account_circle', fontFamily: 'material-symbols-outlined' } as const
   },
   { 
@@ -205,7 +205,7 @@ const events = [
     startTime: new TimeOnly(15, 20), 
     endTime: new TimeOnly(16, 20), 
     description: 'Another overlap', 
-    style: 'background-color: #0ea5e9;',
+    color: '#0ea5e9',
     icon: { type: 'font', content: 'bug_report', fontFamily: 'material-symbols-outlined' } as const
   },
 
@@ -217,7 +217,7 @@ const events = [
     startTime: new TimeOnly(16, 15), 
     endTime: new TimeOnly(18, 15), 
     description: 'Sprint retrospective', 
-    style: 'background-color: #ec4899;',
+    color: '#ec4899',
     icon: { type: 'font', content: 'forum', fontFamily: 'material-symbols-outlined' } as const
   },
 ];

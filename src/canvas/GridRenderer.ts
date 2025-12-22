@@ -158,17 +158,6 @@ export class GridRenderer {
     }
   }
 
-  /**
-   * Render day headers
-   */
-  /**
-   * DEPRECATED: Day headers are now rendered as DOM elements
-   * Kept for reference only - not called during rendering
-   */
-  private renderHeaders(_layout: ScheduleLayout, _theme: CanvasTheme): void {
-    // Headers moved to DOM - this method is no longer used
-    return;
-  }
 
   /**
    * Render time axis labels

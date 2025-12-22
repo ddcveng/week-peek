@@ -22,7 +22,7 @@ function createEvent(
     startTime: new TimeOnly(startHour, startMinute),
     endTime: new TimeOnly(endHour, endMinute),
     title,
-    style: `background-color: ${color};`,
+    color,
     description
   };
 }

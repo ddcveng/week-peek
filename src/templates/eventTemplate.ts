@@ -63,8 +63,8 @@ export function createEventHTML(
   }
      
   const clasName = `event ${event.className || ''}`.trim();
-  if (event.style) {
-    style += ` ${event.style}`;
+  if (event.color) {
+    style += ` background-color: ${event.color};`;
   }
 
   return `

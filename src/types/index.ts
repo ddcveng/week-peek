@@ -202,11 +202,10 @@ export interface ScheduleEvent {
   icon?: EventIcon;
 
   /**
-   * Optional inline CSS styles for the event element
-   * Can be any valid CSS string (e.g., "background: red; border: 1px solid black;")
-   * If provided, this takes precedence over `color`
+   * Optional background color for the event
+   * Can be any valid CSS color value (e.g., "#3b82f6", "rgb(59, 130, 246)", "blue")
    */
-  style?: string;
+  color?: string;
 
   /**
    * Optional CSS class name(s) to apply to event element

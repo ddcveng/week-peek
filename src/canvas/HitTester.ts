@@ -100,14 +100,6 @@ export class HitTester {
     return topmost;
   }
 
-  /**
-   * DEPRECATED: Day headers are now DOM elements
-   * Kept for reference only
-   */
-  private hitTestDayHeaders(point: Point): DayLayout | null {
-    // Day headers moved to DOM
-    return null;
-  }
 
   /**
    * Hit test time slot labels
@@ -124,14 +116,6 @@ export class HitTester {
     return null;
   }
 
-  /**
-   * DEPRECATED: Navigation buttons are now DOM elements
-   * Kept for reference only
-   */
-  private hitTestNavigationButtons(point: Point): HitTestResult | null {
-    // Navigation buttons moved to DOM
-    return null;
-  }
 
   /**
    * Get all events at a point (for overlapping events)

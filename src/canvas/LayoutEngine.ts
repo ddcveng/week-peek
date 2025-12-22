@@ -201,9 +201,9 @@ export class LayoutEngine {
    * Compute day header bounds
    */
   private computeDayHeaderBounds(
-    canvasWidth: number,
-    canvasHeight: number,
-    orientation: ScheduleOrientation
+    _canvasWidth: number,
+    _canvasHeight: number,
+    _orientation: ScheduleOrientation
   ): Rect {
     // Day headers are now in DOM, return zero bounds
     return {
@@ -589,19 +589,11 @@ export class LayoutEngine {
   }
 
   /**
-   * Extract background color from event style string
+   * Extract background color from event
+   * Returns the color property if set, otherwise null (falls back to default theme color)
    */
   private extractBackgroundColor(event: ScheduleEvent): string | null {
-    if (!event.style) return null;
-    
-    // Match background-color or background property
-    const bgColorMatch = event.style.match(/background-color:\s*([^;]+)/i);
-    if (bgColorMatch) return bgColorMatch[1].trim();
-    
-    const bgMatch = event.style.match(/background:\s*([^;]+)/i);
-    if (bgMatch) return bgMatch[1].trim();
-    
-    return null;
+    return event.color ? event.color.trim() : null;
   }
 
   /**
