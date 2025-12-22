@@ -259,7 +259,6 @@ class SpatialIndex<T> {
     const cellX = Math.floor((point.x - this.bounds.x) / this.cellSize);
     const cellY = Math.floor((point.y - this.bounds.y) / this.cellSize);
     const key = `${cellX},${cellY}`;
-    
     return this.cells.get(key) || [];
   }
 

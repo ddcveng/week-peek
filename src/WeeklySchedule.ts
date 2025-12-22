@@ -1656,13 +1656,12 @@ export class WeeklySchedule {
 
   /**
    * Adjust a point for scroll offset (convert screen coords to content coords)
+   * NOTE: When the canvas is inside a scroll container, getBoundingClientRect().left
+   * already changes with scroll position. So eventToCanvasPoint() already returns
+   * scroll-adjusted canvas content coordinates. No additional adjustment needed.
    */
   private adjustPointForScroll(point: { x: number; y: number }): { x: number; y: number } {
-    const isVertical = this.config.orientation === ScheduleOrientation.Vertical;
-    return {
-      x: isVertical ? point.x : point.x + this.scrollX,
-      y: isVertical ? point.y + this.scrollY : point.y,
-    };
+    return point;
   }
 
   /**
