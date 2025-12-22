@@ -278,20 +278,17 @@ export class WeeklySchedule {
     };
 
     // Set up container with hybrid DOM-canvas structure
-    this.container.style.position = 'relative';
-    this.container.style.overflow = 'hidden';
-    this.container.style.display = 'flex';
-    this.container.style.maxWidth = '100%';
-    this.container.style.maxHeight = '100%';
-    this.container.style.boxSizing = 'border-box';
+    // Preserve any existing classes and add schedule-container class
+    const existingClasses = this.originalContainerClasses ? this.originalContainerClasses.split(' ').filter(c => c && c !== 'schedule-container') : [];
+    this.container.className = ['schedule-container', ...existingClasses].join(' ').trim();
     this.container.innerHTML = '';
     
     const isVertical = this.config.orientation === ScheduleOrientation.Vertical;
     const dims = { crossAxisSize: 80, headerSize: 40 };  // Will be properly set after layoutEngine initialization
     const canvasTheme = this.config.canvas?.theme;
     
-    // Update container flex direction based on orientation
-    this.container.style.flexDirection = isVertical ? 'column' : 'row';
+    // Update container orientation class
+    this.container.classList.add(isVertical ? 'vertical' : 'horizontal');
     
     // Set CSS custom properties for theme values on container
     this.container.style.setProperty('--schedule-header-bg-color', canvasTheme?.headerBackgroundColor ?? '#f3f4f6');
@@ -332,45 +329,19 @@ export class WeeklySchedule {
     
     // Create scroll container - this provides native scrollbars
     this.scrollContainer = document.createElement('div');
-    this.scrollContainer.className = 'schedule-scroll-container';
-    // Initially set overflow to hidden - will be updated when zoomed
-    this.scrollContainer.style.cssText = `
-      flex: 1;
-      position: relative;
-      overflow-x: hidden;
-      overflow-y: hidden;
-      min-width: 0;
-      min-height: 0;
-      max-width: 100%;
-      max-height: 100%;
-    `;
+    this.scrollContainer.className = 'schedule-scroll-container scroll-hidden';
     
     // Create content sizer - this defines the scrollable area size
     this.contentSizer = document.createElement('div');
-    this.contentSizer.style.cssText = `
-      position: relative;
-      box-sizing: border-box;
-    `;
+    this.contentSizer.className = 'schedule-content-sizer';
     
     // Create canvas wrapper - contains the canvas at content size
     this.canvasWrapper = document.createElement('div');
-    this.canvasWrapper.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    `;
+    this.canvasWrapper.className = 'schedule-canvas-wrapper';
     
     // Create canvas element
     this.canvas = document.createElement('canvas');
-    this.canvas.style.cssText = `
-      display: block;
-      width: 100%;
-      height: 100%;
-      pointer-events: auto;
-    `;
+    this.canvas.className = 'schedule-canvas';
     
     // Assemble DOM structure
     this.canvasWrapper.appendChild(this.canvas);
@@ -527,14 +498,15 @@ export class WeeklySchedule {
     const isVertical = this.config.orientation === ScheduleOrientation.Vertical;
     const isZoomed = this.zoomedDay !== null;
     
+    // Remove all scroll classes
+    this.scrollContainer.classList.remove('scroll-hidden', 'scroll-vertical', 'scroll-horizontal');
+    
     if (isZoomed) {
       // When zoomed, enable scrolling in the appropriate direction
-      this.scrollContainer.style.overflowX = isVertical ? 'hidden' : 'auto';
-      this.scrollContainer.style.overflowY = isVertical ? 'auto' : 'hidden';
+      this.scrollContainer.classList.add(isVertical ? 'scroll-vertical' : 'scroll-horizontal');
     } else {
       // In normal week view, hide scrollbars to prevent space reservation
-      this.scrollContainer.style.overflowX = 'hidden';
-      this.scrollContainer.style.overflowY = 'hidden';
+      this.scrollContainer.classList.add('scroll-hidden');
     }
   }
 
@@ -698,6 +670,14 @@ export class WeeklySchedule {
     }
     
     this.dispatchEvent('schedule-day-zoom', { day });
+  }
+
+  /**
+   * Get the currently zoomed day, or null if not zoomed
+   * @returns The zoomed day, or null if not zoomed
+   */
+  getZoomedDay(): DayOfWeek | null {
+    return this.zoomedDay;
   }
 
   /**
@@ -1752,8 +1732,8 @@ export class WeeklySchedule {
       this.hideNavigationDOM();
       this.hideDayHeadersDOM();
       // Enable vertical scrolling for mobile
-      this.scrollContainer.style.overflowY = 'auto';
-      this.scrollContainer.style.overflowX = 'hidden';
+      this.scrollContainer.classList.remove('scroll-hidden', 'scroll-horizontal');
+      this.scrollContainer.classList.add('scroll-vertical');
     } else {
       // Exiting mobile mode - restore desktop state
       this.showDayHeadersDOM();

@@ -553,8 +553,14 @@ export class LayoutEngine {
         const width = spanSlots * slotWidth;
         
         const lanePixelHeight = content.height * laneWidth;
-        const top = content.y + content.height * laneStart;
-        const height = lanePixelHeight - (totalLanes > 1 ? this.dimensions.eventGap : 0);
+        let top = content.y + content.height * laneStart;
+        let height = lanePixelHeight - (totalLanes > 1 ? this.dimensions.eventGap : 0);
+        
+        // Add gap at the top of the first event in the lane (topmost event)
+        if (laneIndex === 0 && totalLanes > 1) {
+          top += this.dimensions.eventGap;
+          height -= this.dimensions.eventGap;
+        }
 
         return { x: left, y: top, width, height };
       }
@@ -581,8 +587,14 @@ export class LayoutEngine {
       }
       
       const lanePixelHeight = content.height * laneWidth;
-      const top = content.y + content.height * laneStart;
-      const height = lanePixelHeight - (totalLanes > 1 ? this.dimensions.eventGap : 0);
+      let top = content.y + content.height * laneStart;
+      let height = lanePixelHeight - (totalLanes > 1 ? this.dimensions.eventGap : 0);
+      
+      // Add gap at the top of the first event in the lane (topmost event)
+      if (laneIndex === 0 && totalLanes > 1) {
+        top += this.dimensions.eventGap;
+        height -= this.dimensions.eventGap;
+      }
 
       return { x: left, y: top, width, height };
     }
