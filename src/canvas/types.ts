@@ -142,6 +142,9 @@ export interface ScheduleLayout {
   
   /** Zoomed day (null if not zoomed) */
   zoomedDay: DayOfWeek | null;
+  
+  /** Whether this is a mobile layout */
+  isMobile: boolean;
 }
 
 /**

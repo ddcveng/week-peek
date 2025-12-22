@@ -414,6 +414,99 @@ export class EventRenderer {
 
     this.renderEvent(animatedLayout, isHovered);
   }
+
+  /**
+   * Render all events in mobile layout (list style)
+   */
+  renderMobile(layout: ScheduleLayout): void {
+    // Clip to grid bounds
+    this.renderer.save();
+    this.renderer.clip(layout.gridBounds);
+
+    for (const eventLayout of layout.events) {
+      this.renderMobileEvent(eventLayout);
+    }
+
+    this.renderer.restore();
+  }
+
+  /**
+   * Render a single event in mobile list style
+   * Format: [start time] [title with time range below]
+   */
+  renderMobileEvent(eventLayout: EventLayout): void {
+    const { event, bounds, backgroundColor, textColor } = eventLayout;
+    const theme = this.renderer.getTheme();
+    
+    const BORDER_RADIUS = 6;
+    const PADDING = 12;
+    const TIME_WIDTH = 60;
+    const GAP = 6; // Reduced gap between start time and title
+    
+    // Draw background with full opacity
+    this.renderer.fillRoundedRect(bounds, backgroundColor, BORDER_RADIUS);
+    
+    // Calculate content positions
+    const leftX = bounds.x + PADDING;
+    const rightX = leftX + TIME_WIDTH + GAP;
+    const rightWidth = bounds.x + bounds.width - rightX - PADDING;
+    
+    // Draw start time on the left (black)
+    const startTimeStr = event.startTime.toString();
+    this.renderer.setFont({
+      ...this.config.timeFont,
+      size: 14,
+      weight: 500,
+    });
+    this.renderer.drawText(
+      startTimeStr,
+      leftX,
+      bounds.y + bounds.height / 2,
+      '#000000', // Black
+      'left',
+      'middle'
+    );
+    
+    // Draw title on the right (main text, black)
+    if (rightWidth > 0) {
+      const titleFont = {
+        ...this.config.titleFont,
+        size: 14,
+      };
+      this.renderer.setFont(titleFont);
+      const titleHeight = titleFont.size * this.config.lineHeight;
+      const titleY = bounds.y + (bounds.height - titleHeight - 12) / 2; // Position title above time range
+      
+      this.renderer.drawTextEllipsis(
+        event.title,
+        {
+          x: rightX,
+          y: titleY,
+          width: rightWidth,
+          height: titleHeight,
+        },
+        '#000000' // Black
+      );
+      
+      // Draw time range under title in smaller font (slightly less dark gray)
+      const timeRangeStr = `${event.startTime.toString()} - ${event.endTime.toString()}`;
+      this.renderer.setFont({
+        ...this.config.timeFont,
+        size: 11,
+      });
+      const timeRangeY = titleY + titleHeight + 2;
+      this.renderer.drawTextEllipsis(
+        timeRangeStr,
+        {
+          x: rightX,
+          y: timeRangeY,
+          width: rightWidth,
+          height: 14,
+        },
+        '#666666' // Slightly less dark gray
+      );
+    }
+  }
 }
 
 /**

@@ -305,6 +305,13 @@ export interface ScheduleConfig {
    * Example: { [TranslationKey.mobileNoEvents]: 'No hay eventos para este día.' }
    */
   translations?: Record<TranslationKey, string>;
+
+  /**
+   * Viewport width threshold below which mobile layout is activated
+   * Default: 768 (standard tablet portrait breakpoint)
+   * Set to 0 to disable mobile layout entirely
+   */
+  mobileBreakpoint?: number;
 }
 
 /**

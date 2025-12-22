@@ -4,7 +4,7 @@ import type {
   DayOfWeek,
 } from './types';
 import type { Result } from './types/internal';
-import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, getDayName } from './types';
+import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, getDayName, TranslationKey } from './types';
 
 import { validateConfig, validateEvent } from './utils/validators';
 import { groupEventsByDay, assignLanes } from './utils/layoutHelpers';
@@ -18,7 +18,7 @@ import type {
   EventLayout,
 } from './canvas/types';
 import { LayoutEngine, type LayoutDimensions, ZOOMED_SLOT_SIZE_MULTIPLIER } from './canvas/LayoutEngine';
-import { CanvasRenderer } from './canvas/CanvasRenderer';
+import { CanvasRenderer, withAlpha } from './canvas/CanvasRenderer';
 import { GridRenderer, renderNowIndicator, type GridRendererConfig } from './canvas/GridRenderer';
 import { EventRenderer, type EventRendererConfig } from './canvas/EventRenderer';
 import { HitTester } from './canvas/HitTester';
@@ -168,6 +168,9 @@ export class WeeklySchedule {
   
   // Zoom transition state for View Transition-style animations
   private zoomTransition: ZoomTransition | null = null;
+
+  // Mobile mode state
+  private isMobileMode: boolean = false;
 
   // Original container state for cleanup
   private originalContainerClasses: string;
@@ -902,19 +905,28 @@ export class WeeklySchedule {
 
     const { width, height } = this.renderer.getSize();
     const dpr = this.renderer.getDevicePixelRatio();
-    
-    // Process events (handle overflow indicators, etc.)
-    const processedEvents = this.processEventsForDisplay();
-    
-    this.layout = this.layoutEngine.computeLayout(
-      width,
-      height,
-      processedEvents,
-      dpr,
-      this.zoomedDay,
-      this.originalVisibleDays
-    );
-    
+
+    // Use mobile layout in mobile mode
+    if (this.isMobileMode) {
+      this.layout = this.layoutEngine.computeMobileLayout(
+        width,
+        this.events,
+        dpr
+      );
+    } else {
+      // Process events (handle overflow indicators, etc.)
+      const processedEvents = this.processEventsForDisplay();
+
+      this.layout = this.layoutEngine.computeLayout(
+        width,
+        height,
+        processedEvents,
+        dpr,
+        this.zoomedDay,
+        this.originalVisibleDays
+      );
+    }
+
     // Update hit tester
     this.hitTester.updateLayout(this.layout);
   }
@@ -1266,6 +1278,13 @@ export class WeeklySchedule {
     // Clear canvas
     this.renderer.clear();
 
+    // Mobile mode: simplified rendering
+    if (this.isMobileMode) {
+      this.renderMobileFrame();
+      return;
+    }
+
+    // Desktop mode: full rendering
     // Render grid (background, lines, headers)
     this.gridRenderer.render(this.layout);
 
@@ -1283,6 +1302,82 @@ export class WeeklySchedule {
 
     // Day headers and navigation buttons are now in DOM
     // No need to render hover highlights on canvas
+  }
+  
+  /**
+   * Render mobile layout frame
+   */
+  private renderMobileFrame(): void {
+    if (!this.layout) return;
+    
+    const theme = this.layoutEngine.getTheme();
+    
+    // Render background
+    this.renderer.fillRect(
+      { x: 0, y: 0, width: this.layout.canvasWidth, height: this.layout.canvasHeight },
+      theme.backgroundColor
+    );
+    
+    // Group events by day to check for empty days
+    const eventsByDay = new Map<DayOfWeek, ScheduleEvent[]>();
+    for (const eventLayout of this.layout.events) {
+      const day = eventLayout.event.day;
+      if (!eventsByDay.has(day)) {
+        eventsByDay.set(day, []);
+      }
+      eventsByDay.get(day)!.push(eventLayout.event);
+    }
+    
+    // Render day headers on canvas (no background, just text and divider)
+    for (const dayLayout of this.layout.days) {
+      // Day header text
+      const dayName = getDayName(dayLayout.day, this.config.dayNameTranslations);
+      this.renderer.setFont({
+        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        size: 14,
+        weight: 600,
+      });
+      this.renderer.drawText(
+        dayName,
+        dayLayout.headerBounds.x + 12,
+        dayLayout.headerBounds.y + dayLayout.headerBounds.height / 2,
+        theme.headerTextColor,
+        'left',
+        'middle'
+      );
+      
+      // Day header bottom border (divider line)
+      this.renderer.drawLine(
+        { x: dayLayout.headerBounds.x, y: dayLayout.headerBounds.y + dayLayout.headerBounds.height },
+        { x: dayLayout.headerBounds.x + dayLayout.headerBounds.width, y: dayLayout.headerBounds.y + dayLayout.headerBounds.height },
+        theme.gridLineColor,
+        1
+      );
+      
+      // Render "no events" message for days with no events
+      const dayEvents = eventsByDay.get(dayLayout.day) ?? [];
+      if (dayEvents.length === 0) {
+        const noEventsText = this.config.translations?.[TranslationKey.mobileNoEvents] ?? 'No events';
+        this.renderer.setFont({
+          family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          size: 13,
+          weight: 400,
+        });
+        this.renderer.drawTextCentered(
+          noEventsText,
+          {
+            x: dayLayout.contentBounds.x,
+            y: dayLayout.contentBounds.y,
+            width: dayLayout.contentBounds.width,
+            height: dayLayout.contentBounds.height,
+          },
+          withAlpha(theme.headerTextColor ?? '#666666', 0.6)
+        );
+      }
+    }
+    
+    // Render events in mobile style
+    this.eventRenderer.renderMobile(this.layout);
   }
 
   /**
@@ -1502,19 +1597,84 @@ export class WeeklySchedule {
     }
 
     this.resizeTimeout = setTimeout(() => {
+      // Detect mobile mode based on container width
+      const containerWidth = this.container.clientWidth;
+      const mobileBreakpoint = this.config.mobileBreakpoint ?? 768;
+      const wasMobile = this.isMobileMode;
+      this.isMobileMode = mobileBreakpoint > 0 && containerWidth < mobileBreakpoint;
+      
+      // Handle mode transition
+      if (wasMobile !== this.isMobileMode) {
+        this.handleMobileModeChange();
+      }
+      
       // Calculate content size based on minimum requirements
       this.calculateContentSize();
       
       // Resize canvas to content size (not viewport size)
       this.renderer.resize(this.contentWidth, this.contentHeight);
       
-      // Update DOM day headers
-      this.renderDayHeadersDOM();
+      // Update DOM day headers (skip in mobile mode - we render on canvas)
+      if (!this.isMobileMode) {
+        this.renderDayHeadersDOM();
+      }
       
       this.invalidateLayout();
       this.renderFrame();
       this.resizeTimeout = null;
     }, this.config.resizeDebounce ?? 50);
+  }
+  
+  /**
+   * Handle transition between mobile and desktop modes
+   */
+  private handleMobileModeChange(): void {
+    if (this.isMobileMode) {
+      // Entering mobile mode - reset zoom and hide navigation
+      if (this.zoomedDay !== null) {
+        this.resetZoom();
+      }
+      this.hideNavigationDOM();
+      this.hideDayHeadersDOM();
+      // Enable vertical scrolling for mobile
+      this.scrollContainer.style.overflowY = 'auto';
+      this.scrollContainer.style.overflowX = 'hidden';
+    } else {
+      // Exiting mobile mode - restore desktop state
+      this.showDayHeadersDOM();
+      this.updateScrollContainerOverflow();
+    }
+  }
+  
+  /**
+   * Hide navigation DOM elements (for mobile mode)
+   */
+  private hideNavigationDOM(): void {
+    // Navigation buttons are created in renderDayHeadersDOM when zoomed
+    // Since we reset zoom when entering mobile, they should already be gone
+    // But let's make sure the day header container hides any nav elements
+    if (this.dayHeaderContainer) {
+      const navButtons = this.dayHeaderContainer.querySelectorAll('.schedule-nav-button, .schedule-reset-zoom');
+      navButtons.forEach(btn => (btn as HTMLElement).style.display = 'none');
+    }
+  }
+  
+  /**
+   * Hide day headers DOM (for mobile mode - headers rendered on canvas)
+   */
+  private hideDayHeadersDOM(): void {
+    if (this.dayHeaderContainer) {
+      this.dayHeaderContainer.style.display = 'none';
+    }
+  }
+  
+  /**
+   * Show day headers DOM (for desktop mode)
+   */
+  private showDayHeadersDOM(): void {
+    if (this.dayHeaderContainer) {
+      this.dayHeaderContainer.style.display = '';
+    }
   }
 
   /**
@@ -1557,6 +1717,31 @@ export class WeeklySchedule {
     viewportWidth = Math.max(0, viewportWidth);
     viewportHeight = Math.max(0, viewportHeight);
     
+    // Mobile mode: calculate height based on content (vertical scrolling)
+    if (this.isMobileMode) {
+      this.contentWidth = viewportWidth;
+      // Calculate height based on mobile layout
+      const mobileLayout = this.layoutEngine.computeMobileLayout(
+        viewportWidth,
+        this.events,
+        this.config.canvas?.devicePixelRatio ?? window.devicePixelRatio
+      );
+      // Use calculated height, but ensure at least viewport height
+      this.contentHeight = Math.max(viewportHeight, mobileLayout.canvasHeight);
+      
+      // Update sizing styles for mobile
+      const finalWidth = Math.floor(this.contentWidth);
+      const finalHeight = Math.floor(this.contentHeight);
+      
+      this.contentSizer.style.width = `${finalWidth}px`;
+      this.contentSizer.style.minWidth = '0';
+      this.contentSizer.style.height = `${finalHeight}px`;
+      this.contentSizer.style.maxWidth = `${finalWidth}px`;
+      this.contentSizer.style.maxHeight = ''; // Allow vertical growth
+      return;
+    }
+    
+    // Desktop mode: original logic
     // Get dimensions from layout (already retrieved above)
     const numDays = this.zoomedDay !== null ? 1 : (this.config.visibleDays?.length ?? 5);
     
@@ -1706,6 +1891,13 @@ export class WeeklySchedule {
     const adjustedPoint = this.adjustPointForScroll(point);
     const hitResult = this.hitTester.hitTest(adjustedPoint);
 
+    // Mobile mode: just emit events, no zoom
+    if (this.isMobileMode) {
+      this.handleMobileClick(hitResult);
+      return;
+    }
+
+    // Desktop mode: full interaction logic
     switch (hitResult.type) {
       case 'event':
         if (hitResult.eventLayout?.isOverflow) {
@@ -1757,6 +1949,25 @@ export class WeeklySchedule {
           }
         }
         break;
+    }
+  }
+  
+  /**
+   * Handle click in mobile mode - just emit events
+   */
+  private handleMobileClick(hitResult: HitTestResult): void {
+    switch (hitResult.type) {
+      case 'event':
+        if (hitResult.event) {
+          this.dispatchEvent('schedule-event-click', { event: hitResult.event });
+        }
+        break;
+      case 'day-header':
+        if (hitResult.day !== undefined) {
+          this.dispatchEvent('schedule-day-click', { day: hitResult.day });
+        }
+        break;
+      // No other interactions in mobile mode
     }
   }
 
@@ -1826,6 +2037,13 @@ export class WeeklySchedule {
    * Handle tap (touch equivalent of click)
    */
   private handleTap(hitResult: HitTestResult): void {
+    // Mobile mode: just emit events, no zoom
+    if (this.isMobileMode) {
+      this.handleMobileClick(hitResult);
+      return;
+    }
+
+    // Desktop mode: full interaction logic
     switch (hitResult.type) {
       case 'event':
         if (hitResult.eventLayout?.isOverflow) {

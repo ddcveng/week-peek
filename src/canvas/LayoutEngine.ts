@@ -170,6 +170,7 @@ export class LayoutEngine {
       orientation,
       devicePixelRatio,
       zoomedDay,
+      isMobile: false,
     };
   }
 
@@ -601,6 +602,121 @@ export class LayoutEngine {
     if (bgMatch) return bgMatch[1].trim();
     
     return null;
+  }
+
+  /**
+   * Compute mobile layout - days stacked vertically with events as list items
+   */
+  computeMobileLayout(
+    canvasWidth: number,
+    events: ScheduleEvent[],
+    devicePixelRatio: number = 1
+  ): ScheduleLayout {
+    const visibleDays = this.config.visibleDays ?? [];
+    const eventsByDay = groupEventsByDay(events);
+    
+    // Mobile layout constants
+    const DAY_HEADER_HEIGHT = 40;
+    const EVENT_ROW_HEIGHT = 44;
+    const DAY_PADDING = 8;
+    const HORIZONTAL_PADDING = 12;
+    const HEADER_TO_EVENT_PADDING = 12; // Padding between day divider and first event
+    
+    // Calculate total height needed
+    let totalHeight = 0;
+    const dayHeights: Map<DayOfWeek, number> = new Map();
+    
+    for (const day of visibleDays) {
+      const dayEvents = eventsByDay.get(day) ?? [];
+      const eventsHeight = dayEvents.length > 0 
+        ? dayEvents.length * EVENT_ROW_HEIGHT 
+        : EVENT_ROW_HEIGHT; // Minimum height for "no events" message
+      const dayHeight = DAY_HEADER_HEIGHT + HEADER_TO_EVENT_PADDING + eventsHeight + DAY_PADDING;
+      dayHeights.set(day, dayHeight);
+      totalHeight += dayHeight;
+    }
+    
+    // Build day layouts
+    const days: DayLayout[] = [];
+    let currentY = 0;
+    
+    for (let i = 0; i < visibleDays.length; i++) {
+      const day = visibleDays[i];
+      const dayHeight = dayHeights.get(day) ?? DAY_HEADER_HEIGHT + HEADER_TO_EVENT_PADDING + DAY_PADDING;
+      
+      days.push({
+        day,
+        index: i,
+        headerBounds: {
+          x: 0,
+          y: currentY,
+          width: canvasWidth,
+          height: DAY_HEADER_HEIGHT,
+        },
+        contentBounds: {
+          x: 0,
+          y: currentY + DAY_HEADER_HEIGHT + HEADER_TO_EVENT_PADDING,
+          width: canvasWidth,
+          height: dayHeight - DAY_HEADER_HEIGHT - HEADER_TO_EVENT_PADDING,
+        },
+      });
+      
+      currentY += dayHeight;
+    }
+    
+    // Build event layouts - simple list rows sorted by start time
+    const eventLayouts: EventLayout[] = [];
+    
+    for (const dayLayout of days) {
+      const dayEvents = eventsByDay.get(dayLayout.day) ?? [];
+      
+      // Sort events by start time
+      const sortedEvents = [...dayEvents].sort((a, b) => 
+        a.startTime.toMinutes() - b.startTime.toMinutes()
+      );
+      
+      for (let i = 0; i < sortedEvents.length; i++) {
+        const event = sortedEvents[i];
+        const backgroundColor = this.extractBackgroundColor(event) ?? this.theme.eventDefaultColor;
+        
+        eventLayouts.push({
+          event,
+          bounds: {
+            x: HORIZONTAL_PADDING,
+            y: dayLayout.contentBounds.y + i * EVENT_ROW_HEIGHT,
+            width: canvasWidth - HORIZONTAL_PADDING * 2,
+            height: EVENT_ROW_HEIGHT - 4, // 4px gap between rows
+          },
+          isOverflow: false,
+          backgroundColor,
+          textColor: this.theme.eventTextColor,
+          opacity: 1,
+          scale: 1,
+        });
+      }
+    }
+    
+    // Return mobile layout
+    return {
+      canvasWidth,
+      canvasHeight: totalHeight,
+      gridBounds: {
+        x: 0,
+        y: 0,
+        width: canvasWidth,
+        height: totalHeight,
+      },
+      dayHeaderBounds: { x: 0, y: 0, width: 0, height: 0 },
+      timeAxisBounds: { x: 0, y: 0, width: 0, height: 0 },
+      intersectionBounds: { x: 0, y: 0, width: 0, height: 0 },
+      days,
+      timeSlots: [], // No time slots in mobile view
+      events: eventLayouts,
+      orientation: ScheduleOrientation.Vertical, // Always vertical in mobile
+      devicePixelRatio,
+      zoomedDay: null, // No zooming in mobile
+      isMobile: true,
+    };
   }
 
   /**
