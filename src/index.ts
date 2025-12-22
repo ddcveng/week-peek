@@ -1,3 +1,6 @@
+// Import navigation styles
+import './schedule-navigation.css';
+
 // Canvas-based schedule component
 export { WeeklySchedule, type WeeklyScheduleConfig, type CanvasConfig } from './WeeklySchedule';
 

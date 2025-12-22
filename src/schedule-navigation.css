@@ -1,0 +1,103 @@
+/**
+ * Styles for DOM-based navigation elements in the canvas schedule component
+ * (day headers, navigation buttons, reset zoom button)
+ */
+
+.schedule-day-header-container {
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.schedule-intersection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-right: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  border-bottom: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  background: var(--schedule-header-bg-color, #f3f4f6);
+}
+
+.schedule-day-headers {
+  display: flex;
+  flex: 1;
+}
+
+.schedule-day-header {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: var(--schedule-header-bg-color, #f3f4f6);
+  position: relative;
+  user-select: none;
+}
+
+.schedule-nav-button {
+  height: 40px;
+  width: 100%;
+  border: none;
+  background: var(--schedule-header-bg-color, #f3f4f6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--schedule-text-color, #374151);
+  border-bottom: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  transition: background-color 0.15s ease;
+}
+
+.schedule-nav-button:hover:not(:disabled) {
+  background: var(--schedule-day-hover-color, #e5e7eb);
+}
+
+.schedule-nav-button:disabled {
+  cursor: default;
+  color: var(--schedule-grid-line-color, #e5e7eb);
+}
+
+.schedule-nav-button-prev {
+  /* Additional styles if needed */
+}
+
+.schedule-nav-button-next {
+  border-top: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  border-bottom: none;
+}
+
+.schedule-day-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--schedule-text-color, #374151);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  background: transparent;
+}
+
+.schedule-day-label:hover {
+  background: var(--schedule-day-hover-color, #e5e7eb);
+}
+
+.schedule-reset-zoom-button {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: var(--schedule-header-bg-color, #f3f4f6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--schedule-text-color, #374151);
+  transition: background-color 0.15s ease;
+}
+
+.schedule-reset-zoom-button:hover {
+  background: var(--schedule-day-hover-color, #e5e7eb);
+}

@@ -289,36 +289,38 @@ export class WeeklySchedule {
     // Update container flex direction based on orientation
     this.container.style.flexDirection = isVertical ? 'column' : 'row';
     
+    // Set CSS custom properties for theme values on container
+    this.container.style.setProperty('--schedule-header-bg-color', canvasTheme?.headerBackgroundColor ?? '#f3f4f6');
+    this.container.style.setProperty('--schedule-grid-line-color', canvasTheme?.gridLineColor ?? '#e5e7eb');
+    this.container.style.setProperty('--schedule-grid-line-major-color', canvasTheme?.gridLineMajorColor ?? '#d1d5db');
+    this.container.style.setProperty('--schedule-text-color', canvasTheme?.textColor ?? '#374151');
+    this.container.style.setProperty('--schedule-day-hover-color', canvasTheme?.dayHoverColor ?? '#e5e7eb');
+    
     // Create day header container (fixed, non-scrolling)
     this.dayHeaderContainer = document.createElement('div');
     this.dayHeaderContainer.className = 'schedule-day-header-container';
+    // Only set dynamic styles (dimensions and orientation)
     this.dayHeaderContainer.style.cssText = `
-      display: flex;
       flex-direction: ${isVertical ? 'row' : 'column'};
       ${isVertical ? `height: ${dims.headerSize}px;` : `width: ${dims.crossAxisSize}px;`}
-      background: ${canvasTheme?.headerBackgroundColor ?? '#f3f4f6'};
-      border-bottom: ${isVertical ? '1px' : '0'} solid ${canvasTheme?.gridLineMajorColor ?? '#d1d5db'};
-      border-right: ${isVertical ? '0' : '1px'} solid ${canvasTheme?.gridLineMajorColor ?? '#d1d5db'};
-      flex-shrink: 0;
+      border-bottom: ${isVertical ? '1px' : '0'} solid var(--schedule-grid-line-major-color);
+      border-right: ${isVertical ? '0' : '1px'} solid var(--schedule-grid-line-major-color);
     `;
     
     // Create intersection cell (top-left corner)
     this.intersectionDiv = document.createElement('div');
     this.intersectionDiv.className = 'schedule-intersection';
+    // Only set dynamic dimension
     this.intersectionDiv.style.cssText = `
       ${isVertical ? `width: ${dims.crossAxisSize}px;` : `height: ${dims.headerSize}px;`}
-      background: ${canvasTheme?.headerBackgroundColor ?? '#f3f4f6'};
-      border-${isVertical ? 'right' : 'bottom'}: 1px solid ${canvasTheme?.gridLineColor ?? '#e5e7eb'};
-      flex-shrink: 0;
     `;
     
     // Create day headers container
     this.dayHeadersContainer = document.createElement('div');
     this.dayHeadersContainer.className = 'schedule-day-headers';
+    // Only set dynamic orientation
     this.dayHeadersContainer.style.cssText = `
-      display: flex;
       flex-direction: ${isVertical ? 'row' : 'column'};
-      flex: 1;
     `;
     
     this.dayHeaderContainer.appendChild(this.intersectionDiv);
@@ -1141,6 +1143,21 @@ export class WeeklySchedule {
     const visibleDays = this.zoomedDay ? [this.zoomedDay] : (this.config.visibleDays ?? []);
     const theme = this.renderer.getTheme();
     
+    // Update intersection div with reset zoom button when zoomed
+    this.intersectionDiv.innerHTML = '';
+    if (this.zoomedDay !== null) {
+      const resetButton = document.createElement('button');
+      resetButton.className = 'schedule-reset-zoom-button';
+      resetButton.textContent = this.config.icons?.resetZoom ?? '⟲';
+      resetButton.setAttribute('aria-label', 'Reset zoom');
+      resetButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.resetZoom();
+      });
+      
+      this.intersectionDiv.appendChild(resetButton);
+    }
+    
     // Clear existing headers
     this.dayHeadersContainer.innerHTML = '';
     this.dayHeaders = [];
@@ -1148,14 +1165,6 @@ export class WeeklySchedule {
     for (const day of visibleDays) {
       const headerDiv = document.createElement('div');
       headerDiv.className = 'schedule-day-header';
-      headerDiv.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        background: ${theme.headerBackgroundColor ?? '#f3f4f6'};
-        position: relative;
-        user-select: none;
-      `;
       
       // Add navigation buttons if zoomed
       if (this.zoomedDay === day) {
@@ -1166,29 +1175,9 @@ export class WeeklySchedule {
         const prevButton = document.createElement('button');
         prevButton.className = 'schedule-nav-button schedule-nav-button-prev';
         prevButton.disabled = prevDisabled;
-        prevButton.style.cssText = `
-          height: 40px;
-          width: 100%;
-          border: none;
-          background: ${theme.headerBackgroundColor ?? '#f3f4f6'};
-          cursor: ${prevDisabled ? 'default' : 'pointer'};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-          color: ${prevDisabled ? (theme.gridLineColor ?? '#e5e7eb') : (theme.textColor ?? '#374151')};
-          border-bottom: 1px solid ${theme.gridLineColor ?? '#e5e7eb'};
-          transition: background-color 0.15s ease;
-        `;
         prevButton.textContent = this.config.icons?.prevDay ?? '↑';
         
         if (!prevDisabled) {
-          prevButton.addEventListener('mouseenter', () => {
-            prevButton.style.background = theme.dayHoverColor ?? '#e5e7eb';
-          });
-          prevButton.addEventListener('mouseleave', () => {
-            prevButton.style.background = theme.headerBackgroundColor ?? '#f3f4f6';
-          });
           prevButton.addEventListener('click', (e) => {
             e.stopPropagation();
             if (currentIndex > 0) {
@@ -1203,26 +1192,7 @@ export class WeeklySchedule {
       // Add day label
       const labelDiv = document.createElement('div');
       labelDiv.className = 'schedule-day-label';
-      labelDiv.style.cssText = `
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 500;
-        font-size: 14px;
-        color: ${theme.textColor ?? '#374151'};
-        cursor: pointer;
-        transition: background-color 0.15s ease;
-      `;
       labelDiv.textContent = getDayName(day, this.config.dayNameTranslations);
-      
-      // Add hover and click handlers
-      labelDiv.addEventListener('mouseenter', () => {
-        labelDiv.style.background = theme.dayHoverColor ?? '#e5e7eb';
-      });
-      labelDiv.addEventListener('mouseleave', () => {
-        labelDiv.style.background = 'transparent';
-      });
       labelDiv.addEventListener('click', () => {
         if (this.zoomedDay !== null) {
           // When zoomed, clicking the day label unzooms
@@ -1243,29 +1213,9 @@ export class WeeklySchedule {
         const nextButton = document.createElement('button');
         nextButton.className = 'schedule-nav-button schedule-nav-button-next';
         nextButton.disabled = nextDisabled;
-        nextButton.style.cssText = `
-          height: 40px;
-          width: 100%;
-          border: none;
-          background: ${theme.headerBackgroundColor ?? '#f3f4f6'};
-          cursor: ${nextDisabled ? 'default' : 'pointer'};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-          color: ${nextDisabled ? (theme.gridLineColor ?? '#e5e7eb') : (theme.textColor ?? '#374151')};
-          border-top: 1px solid ${theme.gridLineColor ?? '#e5e7eb'};
-          transition: background-color 0.15s ease;
-        `;
         nextButton.textContent = this.config.icons?.nextDay ?? '↓';
         
         if (!nextDisabled) {
-          nextButton.addEventListener('mouseenter', () => {
-            nextButton.style.background = theme.dayHoverColor ?? '#e5e7eb';
-          });
-          nextButton.addEventListener('mouseleave', () => {
-            nextButton.style.background = theme.headerBackgroundColor ?? '#f3f4f6';
-          });
           nextButton.addEventListener('click', (e) => {
             e.stopPropagation();
             if (currentIndex < this.originalVisibleDays.length - 1) {

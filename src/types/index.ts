@@ -395,6 +395,8 @@ export interface IconConfig {
   prevDay?: string;
   /** Icon content for next day navigation button - can be text, emoji, icon font name, or HTML (e.g., SVG). Defaults to '→' for vertical orientation, '↓' for horizontal */
   nextDay?: string;
+  /** Icon content for reset zoom button - can be text, emoji, icon font name, or HTML (e.g., SVG). Defaults to '⟲' */
+  resetZoom?: string;
 }
 
 /**

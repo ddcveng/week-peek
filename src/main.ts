@@ -2,6 +2,7 @@ import { WeeklySchedule } from './WeeklySchedule';
 import type { ScheduleEvent } from './types';
 import { DayOfWeek, TimeOnly, Hour, Minute, ScheduleOrientation } from './types';
 import './style.css';
+import './schedule-navigation.css';
 
 // Helper function to create events with TimeOnly instances
 function createEvent(
