@@ -7,7 +7,7 @@ import type { Result } from './types/internal';
 import { WORK_WEEK_DAYS, TimeSlotInterval, ScheduleOrientation, getDayName, TranslationKey } from './types';
 
 import { validateConfig, validateEvent } from './utils/validators';
-import { groupEventsByDay, assignLanes } from './utils/layoutHelpers';
+import { groupEventsByDay, assignLanes, eventsOverlap } from './utils/layoutHelpers';
 
 import type { 
   ScheduleLayout, 
@@ -1045,6 +1045,87 @@ export class WeeklySchedule {
         }
       }
 
+      // Highlight-based lane swapping: ensure highlighted events are visible
+      if (this.highlightPredicate && visibleLaneIndices.size > 0 && hiddenLaneIndices.size > 0) {
+        // Find all highlighted events for this day
+        const highlightedEvents = dayEvents.filter(ev => this.highlightPredicate!(ev));
+        
+        if (highlightedEvents.length > 0) {
+          // Build conflict clusters (events that overlap transitively)
+          const conflictClusters: Set<string>[] = [];
+          
+          for (const event of dayEvents) {
+            // Find which cluster this event belongs to
+            let clusterFound = false;
+            for (const cluster of conflictClusters) {
+              for (const eventId of cluster) {
+                const otherEvent = dayEvents.find(e => e.id === eventId);
+                if (otherEvent && eventsOverlap(event, otherEvent)) {
+                  cluster.add(event.id);
+                  clusterFound = true;
+                  break;
+                }
+              }
+              if (clusterFound) break;
+            }
+            
+            // If not in any cluster, create new cluster
+            if (!clusterFound) {
+              const newCluster = new Set<string>([event.id]);
+              let changed = true;
+              while (changed) {
+                changed = false;
+                for (const otherEvent of dayEvents) {
+                  if (newCluster.has(otherEvent.id)) continue;
+                  
+                  for (const eventId of newCluster) {
+                    const clusterEvent = dayEvents.find(e => e.id === eventId);
+                    if (clusterEvent && eventsOverlap(clusterEvent, otherEvent)) {
+                      newCluster.add(otherEvent.id);
+                      changed = true;
+                      break;
+                    }
+                  }
+                }
+              }
+              conflictClusters.push(newCluster);
+            }
+          }
+          
+          // For each conflict cluster, check if any highlighted event is hidden
+          for (const cluster of conflictClusters) {
+            // Find highlighted events in this cluster that are in hidden lanes
+            const highlightedHiddenEvents = highlightedEvents.filter(ev => {
+              if (!cluster.has(ev.id)) return false;
+              const laneInfo = laneMap.get(ev.id);
+              return laneInfo && hiddenLaneIndices.has(laneInfo.laneIndex);
+            });
+            
+            // If we found a highlighted event in a hidden lane, swap with last visible lane
+            // Only one swap per cluster (as per requirement)
+            if (highlightedHiddenEvents.length > 0 && visibleLaneIndices.size > 0) {
+              // Get the lane index of the first highlighted hidden event
+              const highlightedEvent = highlightedHiddenEvents[0];
+              const highlightedLaneInfo = laneMap.get(highlightedEvent.id);
+              
+              if (highlightedLaneInfo) {
+                const highlightedLaneIndex = highlightedLaneInfo.laneIndex;
+                
+                // Find the last visible lane (highest lane index in visibleLaneIndices)
+                const visibleLaneArray = Array.from(visibleLaneIndices);
+                const lastVisibleLane = Math.max(...visibleLaneArray);
+                
+                // Swap: move highlighted event's lane to visible, move last visible lane to hidden
+                visibleLaneIndices.delete(lastVisibleLane);
+                visibleLaneIndices.add(highlightedLaneIndex);
+                hiddenLaneIndices.delete(highlightedLaneIndex);
+                hiddenLaneIndices.add(lastVisibleLane);
+              }
+            }
+          }
+        }
+      }
+
       const visible: ScheduleEvent[] = [];
       const hidden: ScheduleEvent[] = [];
 
@@ -1942,14 +2023,8 @@ export class WeeklySchedule {
           const day = hitResult.event!.day;
           this.zoomToDay(day, anchorEvent);
         } else if (hitResult.event) {
-          // In normal mode, zoom to the event's day; in zoomed mode, dispatch click event
-          if (this.zoomedDay === null) {
-            // Normal mode: zoom to the day containing this event
-            this.zoomToDay(hitResult.event.day, hitResult.event);
-          } else {
-            // Zoomed mode: dispatch click event for custom handling
-            this.dispatchEvent('schedule-event-click', { event: hitResult.event });
-          }
+          // Always dispatch click event for regular events (no zoom)
+          this.dispatchEvent('schedule-event-click', { event: hitResult.event });
         }
         break;
 
@@ -2087,16 +2162,8 @@ export class WeeklySchedule {
           const anchorEvent = conflictGroup.length > 0 ? conflictGroup[0] : undefined;
           this.zoomToDay(hitResult.event!.day, anchorEvent);
         } else if (hitResult.event) {
-          // In normal mode, zoom to the event's day; in zoomed mode, dispatch click event
-          if (this.zoomedDay === null) {
-            // Normal mode: zoom to the day containing this event
-            // Use the screen position (viewport-relative) as anchor for stable positioning
-            // Normal mode: zoom to the day containing this event
-            this.zoomToDay(hitResult.event.day, hitResult.event);
-          } else {
-            // Zoomed mode: dispatch click event for custom handling
-            this.dispatchEvent('schedule-event-click', { event: hitResult.event });
-          }
+          // Always dispatch click event for regular events (no zoom)
+          this.dispatchEvent('schedule-event-click', { event: hitResult.event });
         }
         break;
 
