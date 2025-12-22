@@ -3,7 +3,7 @@
  */
 
 import type { EventLayout, ScheduleLayout, Rect, FontSpec, EventAnimationState } from './types';
-import { CanvasRenderer, darkenColor, withAlpha } from './CanvasRenderer';
+import { CanvasRenderer, withAlpha } from './CanvasRenderer';
 import { EventIcon, ScheduleEvent } from '../types';
 
 /**
@@ -152,9 +152,8 @@ export class EventRenderer {
         ? highlightPredicate(eventLayout.event)
         : true;
       
-      // Pass highlight opacity to renderEvent so it combines with animation opacity
-      const highlightOpacity = isHighlighted ? 1.0 : 0.3;
-      this.renderEvent(eventLayout, isHovered, highlightOpacity);
+      // Pass highlight state to renderEvent
+      this.renderEvent(eventLayout, isHovered, isHighlighted);
     }
 
     this.renderer.restore();
@@ -163,9 +162,8 @@ export class EventRenderer {
   /**
    * Render a single event
    */
-  renderEvent(eventLayout: EventLayout, isHovered: boolean = false, highlightOpacity: number = 1.0): void {
+  renderEvent(eventLayout: EventLayout, _isHovered: boolean = false, isHighlighted: boolean = true): void {
     const { bounds, backgroundColor, opacity, scale, isOverflow } = eventLayout;
-    const theme = this.renderer.getTheme();
 
     // Apply animation transforms
     let renderBounds = bounds;
@@ -182,7 +180,8 @@ export class EventRenderer {
       };
     }
 
-    // Combine animation opacity with highlight opacity
+    // Combine animation opacity with highlight opacity (50% for non-highlighted)
+    const highlightOpacity = isHighlighted ? 1.0 : 0.5;
     const combinedOpacity = opacity * highlightOpacity;
     if (combinedOpacity < 1) {
       this.renderer.setAlpha(combinedOpacity);
@@ -193,24 +192,21 @@ export class EventRenderer {
       this.renderer.drawShadow(renderBounds, this.config.shadowColor, this.config.shadowBlur);
     }
 
-    // Draw background
-    const bgColor = isHovered ? darkenColor(backgroundColor, 10) : backgroundColor;
+    const bgColor = desaturateColor(backgroundColor, 0.7);
+    const borderColor = backgroundColor;
+
     this.renderer.fillRoundedRect(renderBounds, bgColor, this.config.borderRadius);
 
-    // Clear shadow for subsequent draws
     this.renderer.clearShadow();
 
-    // Draw hover border
-    if (isHovered) {
-      this.renderer.strokeRoundedRect(
-        renderBounds,
-        theme.eventHoverBorderColor,
-        this.config.borderRadius,
-        this.config.hoverBorderWidth
-      );
-    }
+    this.renderer.strokeRoundedRect(
+      renderBounds,
+      borderColor,
+      this.config.borderRadius,
+      1
+    );
 
-    // Draw content
+    // Draw content (always use black text now)
     if (isOverflow) {
       this.renderOverflowContent(eventLayout, renderBounds);
     } else {
@@ -299,8 +295,11 @@ export class EventRenderer {
    * Render event content (title, time, description)
    */
   private renderEventContent(eventLayout: EventLayout, bounds: Rect): void {
-    const { event, textColor } = eventLayout;
+    const { event } = eventLayout;
     const padding = this.config.padding;
+    
+    // Always use black text for all events
+    const displayTextColor = '#000000';
     
     // Calculate content area
     const contentBounds: Rect = {
@@ -320,7 +319,7 @@ export class EventRenderer {
     if (event.icon) {
       const iconSize = event.icon.size ?? this.config.titleFont.size;
       
-      iconWidth = this.renderIcon(event.icon, xOffset, yOffset, textColor, iconSize);
+      iconWidth = this.renderIcon(event.icon, xOffset, yOffset, displayTextColor, iconSize);
       
       if (iconWidth > 0) {
         xOffset += iconWidth + this.config.iconSpacing;
@@ -341,7 +340,7 @@ export class EventRenderer {
           width: titleWidth,
           height: titleHeight,
         },
-        textColor
+        displayTextColor
       );
     }
     yOffset += titleHeight;
@@ -360,7 +359,7 @@ export class EventRenderer {
           width: contentBounds.width,
           height: timeHeight,
         },
-        withAlpha(textColor, 0.8)
+        withAlpha(displayTextColor, 0.8)
       );
       yOffset += timeHeight;
     }
@@ -380,7 +379,7 @@ export class EventRenderer {
             width: contentBounds.width,
             height: remainingHeight,
           },
-          withAlpha(textColor, 0.7)
+          withAlpha(displayTextColor, 0.7)
         );
       }
     }
@@ -390,14 +389,17 @@ export class EventRenderer {
    * Render overflow indicator content
    */
   private renderOverflowContent(eventLayout: EventLayout, bounds: Rect): void {
-    const { event, textColor } = eventLayout;
+    const { event } = eventLayout;
+    
+    // Always use black text
+    const displayTextColor = '#000000';
     
     this.renderer.setFont({
       ...this.config.titleFont,
       size: this.config.titleFont.size - 1,
     });
     
-    this.renderer.drawTextCentered(event.title, bounds, textColor);
+    this.renderer.drawTextCentered(event.title, bounds, displayTextColor);
   }
 
   /**
@@ -459,19 +461,26 @@ export class EventRenderer {
     const { event, bounds, backgroundColor, opacity } = eventLayout;
     
     const BORDER_RADIUS = 6;
-    const PADDING = 12;
+    const PADDING = 16; // Increased from 12 for more vertical padding
     const TIME_WIDTH = 60;
     const GAP = 6; // Reduced gap between start time and title
     
-    // Combine animation opacity with highlight opacity
-    const highlightOpacity = isHighlighted ? 1.0 : 0.3;
+    // Combine animation opacity with highlight opacity (50% for non-highlighted)
+    const highlightOpacity = isHighlighted ? 1.0 : 0.5;
     const combinedOpacity = opacity * highlightOpacity;
     if (combinedOpacity < 1) {
       this.renderer.setAlpha(combinedOpacity);
     }
     
-    // Draw background with full opacity
-    this.renderer.fillRoundedRect(bounds, backgroundColor, BORDER_RADIUS);
+    // All events get desaturated background with 1px border
+    const bgColor = desaturateColor(backgroundColor, 0.7);
+    const borderColor = backgroundColor; // Use original color for border
+    
+    // Draw background
+    this.renderer.fillRoundedRect(bounds, bgColor, BORDER_RADIUS);
+    
+    // Draw 1px border with event color
+    this.renderer.strokeRoundedRect(bounds, borderColor, BORDER_RADIUS, 1);
     
     // Calculate content positions
     const leftX = bounds.x + PADDING;
@@ -494,7 +503,7 @@ export class EventRenderer {
       'middle'
     );
     
-    // Draw title on the right (main text, black)
+    // Draw title on the right (black)
     if (rightWidth > 0) {
       const titleFont = {
         ...this.config.titleFont,
@@ -546,6 +555,110 @@ export class EventRenderer {
  */
 function lerp(start: number, end: number, t: number): number {
   return start + (end - start) * t;
+}
+
+/**
+ * Convert sRGB to linear RGB
+ */
+function srgbToLinear(c: number): number {
+  const v = c / 255;
+  return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+}
+
+/**
+ * Convert linear RGB to sRGB
+ */
+function linearToSrgb(c: number): number {
+  const v = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  return Math.round(Math.max(0, Math.min(1, v)) * 255);
+}
+
+/**
+ * Convert linear RGB to oklab
+ */
+function rgbToOklab(r: number, g: number, b: number): [number, number, number] {
+  // Convert to linear RGB
+  const lr = srgbToLinear(r);
+  const lg = srgbToLinear(g);
+  const lb = srgbToLinear(b);
+  
+  // Convert to LMS cone space
+  const l = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb;
+  const m = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb;
+  const s = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb;
+  
+  // Apply cube root
+  const l_ = Math.cbrt(l);
+  const m_ = Math.cbrt(m);
+  const s_ = Math.cbrt(s);
+  
+  // Convert to oklab
+  return [
+    0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+    1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+    0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_,
+  ];
+}
+
+/**
+ * Convert oklab to linear RGB
+ */
+function oklabToRgb(L: number, a: number, b: number): [number, number, number] {
+  // Convert from oklab to LMS
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  
+  // Cube
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
+  
+  // Convert to linear RGB
+  const lr = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+  
+  // Convert to sRGB
+  return [
+    linearToSrgb(lr),
+    linearToSrgb(lg),
+    linearToSrgb(lb),
+  ];
+}
+
+/**
+ * Desaturate a color by mixing it with white in oklab color space
+ * @param color - Hex color string (e.g., '#3b82f6')
+ * @param amount - Amount to desaturate (0-1, where 1 is fully white)
+ * @returns Desaturated color as hex string
+ */
+function desaturateColor(color: string, amount: number = 0.7): string {
+  // Parse hex color
+  const hex = color.replace('#', '');
+  const red = parseInt(hex.substring(0, 2), 16);
+  const green = parseInt(hex.substring(2, 4), 16);
+  const blue = parseInt(hex.substring(4, 6), 16);
+  
+  // Convert to oklab
+  const [L1, a1, b1] = rgbToOklab(red, green, blue);
+  
+  // White in oklab is [1, 0, 0]
+  const L2 = 1;
+  const a2 = 0;
+  const b2 = 0;
+  
+  // Mix in oklab space
+  const L = L1 + (L2 - L1) * amount;
+  const a = a1 + (a2 - a1) * amount;
+  const bMixed = b1 + (b2 - b1) * amount;
+  
+  // Convert back to RGB
+  const [mixR, mixG, mixB] = oklabToRgb(L, a, bMixed);
+  
+  // Convert to hex
+  const toHex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${toHex(mixR)}${toHex(mixG)}${toHex(mixB)}`;
 }
 
 /**

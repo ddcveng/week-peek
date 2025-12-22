@@ -617,7 +617,7 @@ export class LayoutEngine {
     
     // Mobile layout constants
     const DAY_HEADER_HEIGHT = 40;
-    const EVENT_ROW_HEIGHT = 44;
+    const EVENT_ROW_HEIGHT = 56; // Increased from 44 for more vertical padding
     const DAY_PADDING = 8;
     const HORIZONTAL_PADDING = 12;
     const HEADER_TO_EVENT_PADDING = 12; // Padding between day divider and first event
