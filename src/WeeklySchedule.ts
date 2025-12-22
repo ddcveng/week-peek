@@ -517,6 +517,35 @@ export class WeeklySchedule {
   }
 
   /**
+   * Get all events in the conflict group for an overflow indicator
+   * @param overflowEvent - The overflow indicator event
+   * @returns Array of events in the conflict group, sorted by start time
+   */
+  private getConflictGroupForOverflow(overflowEvent: ScheduleEvent): ScheduleEvent[] {
+    const day = overflowEvent.day;
+    
+    // Find all events on this day that overlap with the overflow indicator's time range
+    const conflictGroup = this.events.filter(event => {
+      if (event.day !== day) return false;
+      
+      // Check if event overlaps with overflow indicator's time range
+      const eventStart = event.startTime.toMinutes();
+      const eventEnd = event.endTime.toMinutes();
+      const overflowStart = overflowEvent.startTime.toMinutes();
+      const overflowEnd = overflowEvent.endTime.toMinutes();
+      
+      return eventStart < overflowEnd && eventEnd > overflowStart;
+    });
+    
+    // Sort by start time
+    return conflictGroup.sort((a, b) => {
+      const aMinutes = a.startTime.toMinutes();
+      const bMinutes = b.startTime.toMinutes();
+      return aMinutes - bMinutes;
+    });
+  }
+
+  /**
    * Zoom to a specific day with animated transition
    * @param day - The day to zoom to
    * @param anchorEvent - Optional event to use as anchor for stable positioning (defaults to first event of day)
@@ -1683,9 +1712,11 @@ export class WeeklySchedule {
       case 'event':
         if (hitResult.eventLayout?.isOverflow) {
           // Zoom to day when clicking overflow indicator
-          // Zoom to the day, using the event as anchor for stable positioning
+          // Use the first event from the conflict group as anchor for stable positioning
+          const conflictGroup = this.getConflictGroupForOverflow(hitResult.event!);
+          const anchorEvent = conflictGroup.length > 0 ? conflictGroup[0] : undefined;
           const day = hitResult.event!.day;
-          this.zoomToDay(day, hitResult.event!);
+          this.zoomToDay(day, anchorEvent);
         } else if (hitResult.event) {
           // In normal mode, zoom to the event's day; in zoomed mode, dispatch click event
           if (this.zoomedDay === null) {
@@ -1800,9 +1831,11 @@ export class WeeklySchedule {
     switch (hitResult.type) {
       case 'event':
         if (hitResult.eventLayout?.isOverflow) {
-          // Use the screen position (viewport-relative) as anchor
-          // Zoom to the day, using the event as anchor for stable positioning
-          this.zoomToDay(hitResult.event!.day, hitResult.event!);
+          // Zoom to day when clicking overflow indicator
+          // Use the first event from the conflict group as anchor for stable positioning
+          const conflictGroup = this.getConflictGroupForOverflow(hitResult.event!);
+          const anchorEvent = conflictGroup.length > 0 ? conflictGroup[0] : undefined;
+          this.zoomToDay(hitResult.event!.day, anchorEvent);
         } else if (hitResult.event) {
           // In normal mode, zoom to the event's day; in zoomed mode, dispatch click event
           if (this.zoomedDay === null) {
