@@ -165,6 +165,14 @@ export function getDayName(
 }
 
 /**
+ * Icon configuration for events - discriminated union supporting different icon types
+ */
+export type EventIcon =
+  | { type: 'font'; content: string; fontFamily?: string; size?: number }
+  | { type: 'image'; image: HTMLImageElement; size?: number }
+  | { type: 'url'; url: string; size?: number };
+
+/**
  * A recurring event that appears on a specific day of the week at a specific time.
  * This is NOT tied to any calendar date - it represents a pattern (e.g., "every Monday at 10:00").
  */
@@ -188,11 +196,16 @@ export interface ScheduleEvent {
   description?: string;
 
   /**
-   * Optional inline CSS styles for the event element
-   * Can be any valid CSS string (e.g., "background: red; border: 1px solid black;")
-   * If provided, this takes precedence over `color`
+   * Optional icon to display before the title
+   * Supports icon fonts, preloaded images, or image URLs
    */
-  style?: string;
+  icon?: EventIcon;
+
+  /**
+   * Optional background color for the event
+   * Can be any valid CSS color value (e.g., "#3b82f6", "rgb(59, 130, 246)", "blue")
+   */
+  color?: string;
 
   /**
    * Optional CSS class name(s) to apply to event element
@@ -291,6 +304,13 @@ export interface ScheduleConfig {
    * Example: { [TranslationKey.mobileNoEvents]: 'No hay eventos para este día.' }
    */
   translations?: Record<TranslationKey, string>;
+
+  /**
+   * Viewport width threshold below which mobile layout is activated
+   * Default: 768 (standard tablet portrait breakpoint)
+   * Set to 0 to disable mobile layout entirely
+   */
+  mobileBreakpoint?: number;
 }
 
 /**
@@ -395,6 +415,8 @@ export interface IconConfig {
   prevDay?: string;
   /** Icon content for next day navigation button - can be text, emoji, icon font name, or HTML (e.g., SVG). Defaults to '→' for vertical orientation, '↓' for horizontal */
   nextDay?: string;
+  /** Icon content for reset zoom button - can be text, emoji, icon font name, or HTML (e.g., SVG). Defaults to '⟲' */
+  resetZoom?: string;
 }
 
 /**
