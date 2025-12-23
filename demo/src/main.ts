@@ -16,7 +16,7 @@ const events = [
     title: 'Team Standup', 
     startTime: new TimeOnly(10, 0), 
     endTime: new TimeOnly(11, 0), 
-    description: 'Daily team sync', 
+    description: '<p><strong>Daily team sync</strong></p><p>Discuss progress and blockers</p>', 
     color: '#3b82f6',
     icon: { type: 'font', content: 'groups', fontFamily: 'material-symbols-outlined' } as const
   },
@@ -36,7 +36,7 @@ const events = [
     title: 'Sprint Planning', 
     startTime: new TimeOnly(14, 0), 
     endTime: new TimeOnly(16, 0), 
-    description: 'Plan next sprint', 
+    description: '<h2>Sprint Planning</h2><p>Plan next sprint goals and <strong>priorities</strong></p><p><em>All team members required</em></p>', 
     color: '#8b5cf6',
     icon: { type: 'font', content: 'event_note', fontFamily: 'material-symbols-outlined' } as const
   },
@@ -46,7 +46,7 @@ const events = [
     title: 'Code Review', 
     startTime: new TimeOnly(15, 0), 
     endTime: new TimeOnly(17, 0), 
-    description: 'Overlaps with sprint planning', 
+    description: '<p>Review <strong><em>critical</em></strong> pull requests</p><p>Focus on security and performance</p>', 
     color: '#06b6d4',
     icon: { type: 'font', content: 'code', fontFamily: 'material-symbols-outlined' } as const
   },
@@ -58,7 +58,7 @@ const events = [
     title: '1-on-1', 
     startTime: new TimeOnly(11, 0), 
     endTime: new TimeOnly(12, 0), 
-    description: 'Team member check-in', 
+    description: '<p><strong>Team member check-in</strong></p><p>Discuss career growth and <em>feedback</em></p>', 
     color: '#10b981',
     icon: { type: 'font', content: 'person', fontFamily: 'material-symbols-outlined' } as const
   },
@@ -92,7 +92,7 @@ const events = [
     title: 'Design Review', 
     startTime: new TimeOnly(13, 0), 
     endTime: new TimeOnly(14, 0), 
-    description: 'Review new designs', 
+    description: '<h3>Design Review</h3><p>Review new <strong>UI/UX designs</strong> for upcoming features</p><p>Focus on <em>accessibility</em> and user experience</p>', 
     color: '#f59e0b',
     icon: { type: 'font', content: 'palette', fontFamily: 'material-symbols-outlined' } as const
   },
@@ -154,7 +154,7 @@ const events = [
     title: 'Quick Update', 
     startTime: new TimeOnly(15, 15), 
     endTime: new TimeOnly(16, 45), 
-    description: 'Fully within team meeting', 
+    description: '<h3>Quick Update</h3><p>Status update on <strong>key projects</strong></p><p>Discuss blockers and <em>next steps</em></p>', 
     color: '#ec4899',
     icon: { type: 'font', content: 'update', fontFamily: 'material-symbols-outlined' } as const
   },
@@ -216,7 +216,7 @@ const events = [
     title: 'Retro', 
     startTime: new TimeOnly(16, 15), 
     endTime: new TimeOnly(18, 15), 
-    description: 'Sprint retrospective', 
+    description: '<h2>Sprint Retrospective</h2><p>What went <strong>well</strong>?<br/>What could be <em>improved</em>?<br/>Action items for next sprint</p>', 
     color: '#ec4899',
     icon: { type: 'font', content: 'forum', fontFamily: 'material-symbols-outlined' } as const
   },
@@ -288,13 +288,15 @@ btnVertical.addEventListener('click', () => updateOrientation(ScheduleOrientatio
 btnHorizontal.addEventListener('click', () => updateOrientation(ScheduleOrientation.Horizontal));
 btnReset.addEventListener('click', () => schedule.resetZoom());
 
-// Hover tooltip via custom events (canvas version uses mouse position)
+// Hover tooltip via custom events (uses event bounds for positioning)
 container.addEventListener('schedule-event-hover', (e: Event) => {
   const detail = (e as CustomEvent).detail;
   const ev = detail.event as typeof events[number];
+  const viewportBounds = detail.viewportBounds as { x: number; y: number; width: number; height: number } | undefined;
   const time = `${ev.startTime.toString()} - ${ev.endTime.toString()}`;
   const html = `<strong>${ev.title}</strong>${time}<br/>${ev.description ?? ''}`;
-  showTooltip(null, html); // null = use mouse position
+  // Use viewportBounds if available, otherwise fallback to mouse position
+  showTooltip(null, html, viewportBounds);
 });
 
 container.addEventListener('schedule-event-hover-end', () => hideTooltip());

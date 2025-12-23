@@ -1,4 +1,4 @@
-import { computePosition, offset, flip, shift, virtualElement } from '@floating-ui/dom';
+import { computePosition, offset, flip, shift, type VirtualElement } from '@floating-ui/dom';
 
 let activeTooltip: HTMLElement | null = null;
 let lastMousePosition = { x: 0, y: 0 };
@@ -11,7 +11,7 @@ document.addEventListener('mousemove', (e) => {
 /**
  * Create a virtual anchor at the mouse position for floating-ui
  */
-function createVirtualAnchor(): virtualElement {
+function createVirtualAnchorFromMouse(): VirtualElement {
   return {
     getBoundingClientRect() {
       return {
@@ -28,7 +28,27 @@ function createVirtualAnchor(): virtualElement {
   };
 }
 
-export function showTooltip(anchor: HTMLElement | null, html: string) {
+/**
+ * Create a virtual anchor from bounds (Rect) for floating-ui
+ */
+function createVirtualAnchorFromBounds(bounds: { x: number; y: number; width: number; height: number }): VirtualElement {
+  return {
+    getBoundingClientRect() {
+      return {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        top: bounds.y,
+        left: bounds.x,
+        right: bounds.x + bounds.width,
+        bottom: bounds.y + bounds.height,
+      };
+    },
+  };
+}
+
+export function showTooltip(anchor: HTMLElement | null, html: string, bounds?: { x: number; y: number; width: number; height: number } | null) {
   hideTooltip();
   const layer = document.getElementById('tooltip-layer');
   if (!layer) return;
@@ -39,8 +59,8 @@ export function showTooltip(anchor: HTMLElement | null, html: string) {
   layer.appendChild(tip);
   activeTooltip = tip;
 
-  // Use provided anchor or fallback to virtual anchor at mouse position
-  const reference = anchor ?? createVirtualAnchor();
+  // Use provided anchor, or bounds, or fallback to virtual anchor at mouse position
+  const reference = anchor ?? (bounds ? createVirtualAnchorFromBounds(bounds) : createVirtualAnchorFromMouse());
 
   computePosition(reference, tip, {
     placement: 'top',
