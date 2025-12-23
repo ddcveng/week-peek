@@ -2156,8 +2156,8 @@ export class WeeklySchedule {
    * Update hover state based on hit result
    */
   private updateHoverState(hitResult: HitTestResult): void {
-    // Handle event hover
-    if (hitResult.type === 'event' && hitResult.event) {
+    // Handle event hover (skip overflow indicators)
+    if (hitResult.type === 'event' && hitResult.event && !hitResult.eventLayout?.isOverflow) {
       if (this.lastHoveredEventId !== hitResult.event.id) {
         // End hover on previous event
         if (this.interactionState.hoveredEvent) {
@@ -2223,14 +2223,70 @@ export class WeeklySchedule {
    * Dispatch hover event
    */
   private dispatchHover(event: ScheduleEvent): void {
-    this.dispatchEvent('schedule-event-hover', { event });
+    // Find the event layout to get position information
+    let bounds: Rect | undefined;
+    let viewportBounds: Rect | undefined;
+
+    if (this.layout) {
+      const eventLayout = this.layout.events.find(e => e.event.id === event.id);
+      
+      if (eventLayout) {
+        // Canvas content coordinates (bounds from layout)
+        bounds = { ...eventLayout.bounds };
+        
+        // Convert to viewport coordinates (like getBoundingClientRect)
+        // The canvas is inside the scroll container, so getBoundingClientRect() already accounts for scroll
+        // We just need to add the bounds offset relative to the canvas origin
+        const canvasRect = this.canvas.getBoundingClientRect();
+        viewportBounds = {
+          x: canvasRect.left + eventLayout.bounds.x,
+          y: canvasRect.top + eventLayout.bounds.y,
+          width: eventLayout.bounds.width,
+          height: eventLayout.bounds.height,
+        };
+      }
+    }
+
+    this.dispatchEvent('schedule-event-hover', { 
+      event,
+      bounds,
+      viewportBounds,
+    });
   }
 
   /**
    * Dispatch hover end event
    */
   private dispatchHoverEnd(event: ScheduleEvent): void {
-    this.dispatchEvent('schedule-event-hover-end', { event });
+    // Include position information for consistency (useful for cleanup/animations)
+    let bounds: Rect | undefined;
+    let viewportBounds: Rect | undefined;
+
+    if (this.layout) {
+      const eventLayout = this.layout.events.find(e => e.event.id === event.id);
+      
+      if (eventLayout) {
+        // Canvas content coordinates (bounds from layout)
+        bounds = { ...eventLayout.bounds };
+        
+        // Convert to viewport coordinates (like getBoundingClientRect)
+        // The canvas is inside the scroll container, so getBoundingClientRect() already accounts for scroll
+        // We just need to add the bounds offset relative to the canvas origin
+        const canvasRect = this.canvas.getBoundingClientRect();
+        viewportBounds = {
+          x: canvasRect.left + eventLayout.bounds.x,
+          y: canvasRect.top + eventLayout.bounds.y,
+          width: eventLayout.bounds.width,
+          height: eventLayout.bounds.height,
+        };
+      }
+    }
+
+    this.dispatchEvent('schedule-event-hover-end', { 
+      event,
+      bounds,
+      viewportBounds,
+    });
   }
 
   /**
