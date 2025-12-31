@@ -59,9 +59,6 @@
   filter: opacity(0.4);
 }
 
-.schedule-nav-button-prev {
-  /* Additional styles if needed */
-}
 
 .schedule-nav-button-next {
   border-top: 1px solid var(--schedule-grid-line-color, #e5e7eb);
@@ -167,6 +164,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  width: 0; /* Critical: ensures flex item starts at 0 width and grows properly in row containers */
   overflow: hidden;
 }
 
@@ -176,6 +174,7 @@
   min-height: 0; /* Critical for flex shrinking and enabling overflow */
   height: 0; /* Let flex determine actual height */
   max-height: none; /* Override base 100% constraint */
+  width: 100%; /* Take full width of parent (column flex container) */
 }
 
 /**
@@ -208,12 +207,6 @@
 
 .schedule-time-slot-label:first-child {
   border-left: none;
-}
-
-/* When time header is present, scroll container fills remaining space */
-.schedule-scroll-area-wrapper.has-time-header .schedule-scroll-container {
-  flex: 1;
-  min-height: 0;
 }
 
 /**
