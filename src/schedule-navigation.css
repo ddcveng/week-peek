@@ -1,0 +1,246 @@
+/**
+ * Styles for DOM-based navigation elements in the canvas schedule component
+ * (day headers, navigation buttons, reset zoom button)
+ */
+
+.schedule-day-header-container {
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.schedule-intersection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-right: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  border-bottom: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  background: var(--schedule-header-bg-color, #f3f4f6);
+}
+
+.schedule-day-headers {
+  display: flex;
+  flex: 1;
+}
+
+.schedule-day-header {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: var(--schedule-header-bg-color, #f3f4f6);
+  position: relative;
+  user-select: none;
+}
+
+.schedule-nav-button {
+  height: 40px;
+  width: 100%;
+  border: none;
+  background: var(--schedule-header-bg-color, #f3f4f6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--schedule-text-color, #374151);
+  border-bottom: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  transition: background-color 0.15s ease;
+}
+
+.schedule-nav-button:hover:not(:disabled) {
+  background: var(--schedule-day-hover-color, #e5e7eb);
+}
+
+.schedule-nav-button:disabled {
+  cursor: default;
+  color: var(--schedule-grid-line-color, #e5e7eb);
+  filter: opacity(0.4);
+}
+
+.schedule-nav-button-prev {
+  /* Additional styles if needed */
+}
+
+.schedule-nav-button-next {
+  border-top: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  border-bottom: none;
+}
+
+.schedule-day-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--schedule-text-color, #374151);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  background: transparent;
+}
+
+.schedule-day-label:hover {
+  background: var(--schedule-day-hover-color, #e5e7eb);
+}
+
+.schedule-reset-zoom-button {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: var(--schedule-header-bg-color, #f3f4f6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--schedule-text-color, #374151);
+  transition: background-color 0.15s ease;
+}
+
+.schedule-reset-zoom-button:hover {
+  background: var(--schedule-day-hover-color, #e5e7eb);
+}
+
+/**
+ * Main schedule container
+ */
+.schedule-container {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+.schedule-container.vertical {
+  flex-direction: column;
+}
+
+.schedule-container.horizontal {
+  flex-direction: row;
+}
+
+/**
+ * Scroll container - provides native scrollbars
+ */
+.schedule-scroll-container {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.schedule-scroll-container.scroll-hidden {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.schedule-scroll-container.scroll-vertical {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.schedule-scroll-container.scroll-horizontal {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.schedule-scroll-container.scroll-both {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/**
+ * Scroll area wrapper - contains optional time header + scroll container
+ * Acts as a flex column container within the main horizontal/vertical flex container
+ */
+.schedule-scroll-area-wrapper {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* When time header is present, scroll container fills remaining space after header */
+.schedule-scroll-area-wrapper.has-time-header > .schedule-scroll-container {
+  flex: 1 1 0%;
+  min-height: 0; /* Critical for flex shrinking and enabling overflow */
+  height: 0; /* Let flex determine actual height */
+  max-height: none; /* Override base 100% constraint */
+}
+
+/**
+ * Time header row - fixed at top, scrolls horizontally in sync with content
+ */
+.schedule-time-header-row {
+  flex-shrink: 0;
+  height: 40px;
+  overflow: hidden;
+  background: var(--schedule-header-bg-color, #f3f4f6);
+  border-bottom: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+}
+
+.schedule-time-header-content {
+  display: flex;
+  height: 100%;
+}
+
+.schedule-time-slot-label {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 8px;
+  font-size: 12px;
+  color: var(--schedule-text-color, #374151);
+  border-left: 1px solid var(--schedule-grid-line-color, #e5e7eb);
+  box-sizing: border-box;
+}
+
+.schedule-time-slot-label:first-child {
+  border-left: none;
+}
+
+/* When time header is present, scroll container fills remaining space */
+.schedule-scroll-area-wrapper.has-time-header .schedule-scroll-container {
+  flex: 1;
+  min-height: 0;
+}
+
+/**
+ * Content sizer - defines the scrollable area size
+ */
+.schedule-content-sizer {
+  position: relative;
+  box-sizing: border-box;
+}
+
+/**
+ * Canvas wrapper - contains the canvas at content size
+ */
+.schedule-canvas-wrapper {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/**
+ * Canvas element
+ */
+.schedule-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
