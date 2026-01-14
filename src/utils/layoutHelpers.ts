@@ -19,6 +19,7 @@ export function timeToSlotIndex(
 }
 
 
+
 /**
  * Calculate the fractional offset within a time slot (0.0 to 1.0)
  * @param time - TimeOnly instance

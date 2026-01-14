@@ -604,7 +604,10 @@ export class LayoutEngine {
       let width = 0;
       for (let i = startSlot; i <= Math.min(endSlot, timeSlots.length - 1); i++) {
         const slot = timeSlots[i];
-        if (i === startSlot) {
+        if (i === startSlot && i === endSlot) {
+          // Event starts and ends in same slot: use difference between offsets
+          width += slot.labelBounds.width * (endOffset - startOffset);
+        } else if (i === startSlot) {
           // First slot: use remaining width after offset
           width += slot.labelBounds.width * (1 - startOffset);
         } else if (i === endSlot) {
