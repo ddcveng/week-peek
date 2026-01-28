@@ -64,6 +64,8 @@ export interface LayoutDimensions {
   eventPadding: number;
   /** Gap between overlapping events */
   eventGap: number;
+  /** Gap between temporally adjacent events (one ends when another starts) */
+  adjacentEventGap: number;
   /** Border radius for events */
   eventBorderRadius: number;
 }
@@ -76,6 +78,7 @@ const DEFAULT_DIMENSIONS: LayoutDimensions = {
   minDayColumnWidth: 150,
   eventPadding: 8,
   eventGap: 2,
+  adjacentEventGap: 1,
   eventBorderRadius: 4,
 };
 
@@ -562,7 +565,7 @@ export class LayoutEngine {
       const slotHeight = content.height / slotCount;
       const top = content.y + (startSlot + startOffset) * slotHeight;
       const spanSlots = endSlot - startSlot + endOffset - startOffset;
-      const height = spanSlots * slotHeight;
+      const height = spanSlots * slotHeight - this.dimensions.adjacentEventGap;
       
       const lanePixelWidth = content.width * laneWidth;
       const left = content.x + content.width * laneStart;
@@ -580,7 +583,7 @@ export class LayoutEngine {
         const slotWidth = content.width / slotCount;
         const left = content.x + (startSlot + startOffset) * slotWidth;
         const spanSlots = endSlot - startSlot + endOffset - startOffset;
-        const width = spanSlots * slotWidth;
+        const width = spanSlots * slotWidth - this.dimensions.adjacentEventGap;
         
         const lanePixelHeight = content.height * laneWidth;
         let top = content.y + content.height * laneStart;
@@ -618,6 +621,8 @@ export class LayoutEngine {
           width += slot.labelBounds.width;
         }
       }
+      // Subtract gap to prevent overlap with adjacent events
+      width -= this.dimensions.adjacentEventGap;
       
       const lanePixelHeight = content.height * laneWidth;
       let top = content.y + content.height * laneStart;
