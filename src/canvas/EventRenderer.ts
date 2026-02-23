@@ -484,15 +484,19 @@ export class EventRenderer {
 
   /**
    * Render a single event in mobile list style
-   * Format: [start time] [title with time range below]
+   * Format: [start time] [icon (if present, in gap)] [title with time range below]
+   * Icons are positioned in the gap between time and title to maintain consistent alignment
+   * Icons use a mobile-optimized default size of 16px
    */
   renderMobileEvent(eventLayout: EventLayout, isHighlighted: boolean = true): void {
     const { event, bounds, backgroundColor, opacity } = eventLayout;
     
     const BORDER_RADIUS = 6;
     const PADDING = 16; // Increased from 12 for more vertical padding
-    const TIME_WIDTH = 60;
-    const GAP = 6; // Reduced gap between start time and title
+    const TIME_WIDTH = 32; // Fits "10:45" / "23:59" at 14px font; reduces gap before icon
+    const GAP_BEFORE_ICON = 8; // Space between time text and icon area
+    const ICON_AREA_WIDTH = 24; // Enough for 16px icon centered with 4px padding on each side
+    const GAP_AFTER_ICON = 8; // Space between icon area and title
     
     // Combine animation opacity with highlight opacity (50% for non-highlighted)
     const highlightOpacity = isHighlighted ? 1.0 : 0.5;
@@ -513,8 +517,7 @@ export class EventRenderer {
     
     // Calculate content positions
     const leftX = bounds.x + PADDING;
-    const rightX = leftX + TIME_WIDTH + GAP;
-    const rightWidth = bounds.x + bounds.width - rightX - PADDING;
+    const rightX = leftX + TIME_WIDTH + GAP_BEFORE_ICON + ICON_AREA_WIDTH + GAP_AFTER_ICON;
     
     // Draw start time on the left (black)
     const startTimeStr = event.startTime.toString();
@@ -532,7 +535,19 @@ export class EventRenderer {
       'middle'
     );
     
-    // Draw title on the right (black)
+
+    if (event.icon) {
+      const MOBILE_ICON_SIZE = 16;
+      const iconSize = event.icon.size ?? MOBILE_ICON_SIZE;
+      
+      const iconX = leftX + TIME_WIDTH + GAP_BEFORE_ICON + (ICON_AREA_WIDTH - iconSize) / 2;
+      const iconY = bounds.y + (bounds.height - iconSize) / 2;
+      
+      this.renderIcon(event.icon, iconX, iconY, EVENT_TEXT_COLOR, iconSize);
+    }
+    
+    const rightWidth = bounds.x + bounds.width - rightX - PADDING;
+    
     if (rightWidth > 0) {
       const titleFont = {
         ...this.config.titleFont,
